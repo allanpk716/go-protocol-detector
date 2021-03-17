@@ -2,14 +2,18 @@ package Detector
 
 import (
 	"testing"
+	"time"
+)
+var (
+	timeOut = 3 * time.Second
 )
 
 func TestNewDetector(t *testing.T) {
-	NewDetector()
+	NewDetector(timeOut)
 }
 
 func TestDetector_RDPCheck(t *testing.T) {
-	det := NewDetector()
+	det := NewDetector(timeOut)
 	if det.rdp.GetVersion() == ""{
 		t.Fatal("rdp version is empty")
 	}
@@ -21,11 +25,16 @@ func TestDetector_RDPCheck(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	//
+	err = det.RDPCheck("192.168.200.1", "1")
+	if err != ErrRDPNotFound {
+		t.Fatal(err)
+	}
 }
 
 func TestDetector_SSHCheck(t *testing.T) {
 
-	det := NewDetector()
+	det := NewDetector(timeOut)
 	if det.ssh.GetVersion() == ""{
 		t.Fatal("ssh version is empty")
 	}
@@ -34,16 +43,26 @@ func TestDetector_SSHCheck(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	//
+	err = det.SSHCheck("192.168.200.1", "1")
+	if err != ErrSSHNotFound {
+		t.Fatal(err)
+	}
 }
 
 func TestDetector_FTPCheck(t *testing.T) {
-	det := NewDetector()
+	det := NewDetector(timeOut)
 	if det.ftp.GetVersion() == ""{
 		t.Fatal("ftp version is empty")
 	}
 	// change to your FTP IP and port
 	err := det.FTPCheck("cdimage.debian.org", "21")
 	if err != nil {
+		t.Fatal(err)
+	}
+	//
+	err = det.FTPCheck("192.168.200.1", "1")
+	if err != ErrFTPNotFound {
 		t.Fatal(err)
 	}
 }
