@@ -27,8 +27,7 @@ func NewDetector(timeOut time.Duration) *Detector {
 }
 
 func (d Detector) RDPCheck(host, port string) error {
-	timeout := 3 * time.Second
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), d.timeOut)
 	if err != nil {
 		return ErrRDPNotFound
 	}
