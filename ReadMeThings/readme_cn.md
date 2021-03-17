@@ -1,5 +1,9 @@
 # Go Protocol Detector
 
+本文会介绍 RDP、SSH、FTP 三种协议的抓包分析过程。
+
+> WireShark 使用不操作 10 次。无法回答深入问题。
+
 ## 如何使用 WireShark 抓包分析 RDP
 
 
@@ -112,5 +116,3 @@ SSH-2.0-OpenSSH_7.6p1 Ubuntu-4ubuntu0.3
 [《从协议提取到多功能RDP识别脚本》](https://cloud.tencent.com/developer/article/1144882)，文章中的一个 [python 版本](https://github.com/lonelyvaf/rdp_find) 的实现
 
 没有找到原文，是转载的。但是给出了作者信息（未核实）：微信公众号 - 晨星先生（MoXuanIT）
-
-> WireShark 使用不操作 10 次。无法回答深入问题。
