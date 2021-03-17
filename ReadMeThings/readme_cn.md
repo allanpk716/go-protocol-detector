@@ -80,6 +80,31 @@ ip.addr == 192.168.200.24
 * 2016
 * 2019
 
+## 如何使用 WireShark 抓包分析 SSH
+
+基本的分析参见 RDP 的分析。这里针对 SSH 交互流程进行了特殊处理。
+
+SSH 协议的握手流程中，第二步是 Client 与 Server 的版本协议交换。那么就从这里下手，发送你的 Client 版本信息，那么 Server 就应该回复对应的给你。
+
+![ssh_tcp_steam](pics/ssh_tcp_steam.png)
+
+Client
+
+```
+SSH-2.0-OpenSSH_for_Windows_7.7
+53 53 48 2d 32 2e 30 2d 4f 70 65 6e 53 53 48 5f 66 6f 72 5f 57 69 6e 64 6f 77 73 5f 37 2e 37 0d 0a
+```
+
+Server
+
+```
+SSH-2.0-OpenSSH_7.6p1 Ubuntu-4ubuntu0.3
+53 53 48 2d 32 2e 30 2d 4f 70 65 6e 53 53 48 5f 37 2e 36 70 31 20 55 62 75 6e 74 75 2d 34 75 62 75 6e 74 75 30 2e 33 0d 0a
+```
+
+
+
+
 ## 致谢
 
 本文参考了以下的文章，才做出了复现。
