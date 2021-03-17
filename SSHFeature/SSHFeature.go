@@ -24,6 +24,7 @@ func NewSSHHelper() *SSHHelper {
 				FeatureBytes: []byte("\x2d"),
 			},
 		},
+		version: "v0.1",
 	}
 
 	return &ssh
