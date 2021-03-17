@@ -2,7 +2,9 @@
 
 Network protocol detector. 
 
-**Not Stable Version !** May be refactored in future use.
+**Not Stable Version !** 
+
+May be refactored in future use.
 
 ## How to use
 
@@ -11,8 +13,10 @@ See [detector_test.go](https://github.com/allanpk716/go-protocol-detector/blob/m
 ## TO DO
 
 - [x] Support RDP detector
-- [ ] Support FTP detector
+- [x] Support FTP detector
 - [x] Support SSH detector
+- [ ] Support SFTP detector
+- [ ] Support VNC detector
 
 ## How to implement
 
