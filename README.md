@@ -6,15 +6,18 @@ Network protocol detector.
 
 May be refactored in future use.
 
+## Support Protocol
+
+* RDP
+* FTP
+* SSH
+
 ## How to use
 
 See [detector_test.go](https://github.com/allanpk716/go-protocol-detector/blob/master/detector_test.go)
 
-## TO DO
+## TODO
 
-- [x] Support RDP detector
-- [x] Support FTP detector
-- [x] Support SSH detector
 - [ ] Support SFTP detector
 - [ ] Support VNC detector
 - [ ] Support Telnet detector
