@@ -1,4 +1,4 @@
-package detector
+package Detector
 
 import (
 	"testing"
@@ -31,6 +31,18 @@ func TestDetector_SSHCheck(t *testing.T) {
 	}
 	// change to your PC IP and port
 	err := det.SSHCheck("192.168.200.23", "22")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDetector_FTPCheck(t *testing.T) {
+	det := NewDetector()
+	if det.ftp.GetVersion() == ""{
+		t.Fatal("ftp version is empty")
+	}
+	// change to your FTP IP and port
+	err := det.FTPCheck("cdimage.debian.org", "21")
 	if err != nil {
 		t.Fatal(err)
 	}
