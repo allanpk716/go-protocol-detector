@@ -12,7 +12,7 @@ See [detector_test.go](https://github.com/allanpk716/go-protocol-detector/blob/m
 
 - [x] Support RDP detector
 - [ ] Support FTP detector
-- [ ] Support SSH detector
+- [x] Support SSH detector
 
 ## How to implement
 
