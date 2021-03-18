@@ -84,7 +84,7 @@ func TestDetector_TelnetCheck(t *testing.T) {
 
 func TestDetector_VNCCheck(t *testing.T) {
 	det := NewDetector(timeOut)
-	// change to your Telnet IP and port
+	// change to your VNC IP and port
 	err := det.VNCCheck("172.20.65.233", "5902")
 	if err != nil {
 		t.Fatal(err)
