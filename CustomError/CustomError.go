@@ -8,4 +8,7 @@ var (
 	ErrFTPNotFound = errors.New("ftp not found")
 	ErrTelnetNotFound = errors.New("telnet not found")
 	ErrVNCNotFound = errors.New("vnc not found")
+	ErrSFTPNotFound = errors.New("sftp not found")
 )
+
+const ErrSSHOrgErrorInfo = "ssh: handshake failed"

@@ -68,6 +68,23 @@ func TestDetector_FTPCheck(t *testing.T) {
 	}
 }
 
+func TestDetector_SFTPCheck(t *testing.T) {
+	det := NewDetector(timeOut)
+	// change to your SFTP IP and port
+	// use password login
+	err := det.SFTPCheck("172.20.65.150", "22", "user", "123", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// use private key login, private key with password '123'
+	err = det.SFTPCheck("172.20.65.150", "22", "user", "123", "privatekey.ppk")
+	//err := det.SFTPCheck("192.168.200.23", "22")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+
 func TestDetector_TelnetCheck(t *testing.T) {
 	det := NewDetector(timeOut)
 	// change to your Telnet IP and port

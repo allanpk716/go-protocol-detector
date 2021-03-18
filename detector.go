@@ -6,6 +6,7 @@ import (
 	"github.com/allanpk716/go-protocol-detector/FTPFeature"
 	"github.com/allanpk716/go-protocol-detector/Model"
 	"github.com/allanpk716/go-protocol-detector/RDPFeature"
+	"github.com/allanpk716/go-protocol-detector/SFTPFeature"
 	"github.com/allanpk716/go-protocol-detector/SSHFeature"
 	"github.com/allanpk716/go-protocol-detector/TelnetFeature"
 	"github.com/allanpk716/go-protocol-detector/VNCFeature"
@@ -39,6 +40,10 @@ func (d Detector) SSHCheck(host, port string) error {
 
 func (d Detector) FTPCheck(host, port string) error {
 	return d.commonCheck(host, port, d.ftp.SenderPackage, d.ftp.ReceiverFeatures, CustomError.ErrFTPNotFound)
+}
+
+func (d Detector) SFTPCheck(host, port, user, password, privateKeyFullPath string) error {
+	return SFTPFeature.NewSFTPHelper(host, port, d.timeOut).Check(user, password, privateKeyFullPath)
 }
 
 func (d Detector) TelnetCheck(host, port string) error {

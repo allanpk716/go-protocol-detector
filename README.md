@@ -9,9 +9,17 @@ May be refactored in future use.
 ## Support Protocol
 
 * RDP
+
 * FTP
+
+* SFTP
+
+  > Something you should know, first, SSH validation is required, then check SFTP Client protocol.
+
 * SSH
+
 * VNC
+
 * Telnet
 
 ## How to use
@@ -20,7 +28,7 @@ See [detector_test.go](https://github.com/allanpk716/go-protocol-detector/blob/m
 
 ## TODO
 
-- [ ] Support SFTP detector
+- [x] Support SFTP detector
 - [x] Support VNC detector
 - [x] Support Telnet detector
 
