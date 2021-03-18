@@ -20,7 +20,7 @@ See [detector_test.go](https://github.com/allanpk716/go-protocol-detector/blob/m
 
 - [ ] Support SFTP detector
 - [ ] Support VNC detector
-- [ ] Support Telnet detector
+- [x] Support Telnet detector
 
 ## How to implement
 
