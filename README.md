@@ -26,3 +26,6 @@ See [detector_test.go](https://github.com/allanpk716/go-protocol-detector/blob/m
 
 [[中文教程]](https://github.com/allanpk716/go-protocol-detector/blob/master/ReadMeThings/readme_cn.md)
 
+## Thanks
+
+* [ziutek/telnet](ziutek/telnet)

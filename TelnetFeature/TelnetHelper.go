@@ -94,14 +94,6 @@ func (t *TelnetHelper) dont(option byte) error {
 }
 
 const (
-	cmdSE   = 240
-	cmdNOP  = 241
-	cmdData = 242
-
-	cmdBreak = 243
-	cmdGA    = 249
-	cmdSB    = 250
-
 	cmdWill = 251
 	cmdWont = 252
 	cmdDo   = 253
