@@ -15,6 +15,8 @@ May be refactored in future use.
 * SFTP
 
   > Something you should know, first, SSH validation is required, then check SFTP Client protocol.
+  >
+  > I think it need implemented by [gopacket](https://github.com/google/gopacket)
 
 * SSH
 
@@ -28,9 +30,7 @@ See [detector_test.go](https://github.com/allanpk716/go-protocol-detector/blob/m
 
 ## TODO
 
-- [x] Support SFTP detector
-- [x] Support VNC detector
-- [x] Support Telnet detector
+- [ ] SFTP detected by [gopacket](https://github.com/google/gopacket)
 
 ## How to implement
 
