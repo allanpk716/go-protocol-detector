@@ -1,5 +1,7 @@
 # Go Protocol Detector
 
+[[中文]](https://github.com/allanpk716/go-protocol-detector/blob/master/ReadMeThings/readme_cn.md)
+
 Network protocol detector. 
 
 **Not Stable Version !** 
@@ -34,7 +36,7 @@ See [detector_test.go](https://github.com/allanpk716/go-protocol-detector/blob/m
 
 ## How to implement
 
-[[中文教程]](https://github.com/allanpk716/go-protocol-detector/blob/master/ReadMeThings/readme_cn.md)
+[[中文教程]](https://github.com/allanpk716/go-protocol-detector/blob/master/ReadMeThings/readme_cn_tutorial.md)
 
 ## Thanks
 
