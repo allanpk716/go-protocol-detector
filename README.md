@@ -11,6 +11,8 @@ May be refactored in future use.
 * RDP
 * FTP
 * SSH
+* VNC
+* Telnet
 
 ## How to use
 
