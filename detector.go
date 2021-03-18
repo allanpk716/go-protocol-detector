@@ -6,6 +6,7 @@ import (
 	"github.com/allanpk716/go-protocol-detector/Model"
 	"github.com/allanpk716/go-protocol-detector/RDPFeature"
 	"github.com/allanpk716/go-protocol-detector/SSHFeature"
+	"github.com/ziutek/telnet"
 	"net"
 	"time"
 )
@@ -39,6 +40,10 @@ func (d Detector) RDPCheck(host, port string) error {
 		return ErrRDPNotFound
 	}
 	var readBuf = make([]byte, len(d.rdp.ReceiverFeature))
+	err = conn.SetReadDeadline(time.Now().Add(d.timeOut))
+	if err != nil {
+		return ErrTelnetNotFound
+	}
 	_, err = conn.Read(readBuf)
 	if err != nil {
 		return ErrRDPNotFound
@@ -58,6 +63,20 @@ func (d Detector) FTPCheck(host, port string) error {
 	return d.commonCheck(host, port, d.ftp.SenderPackage, d.ftp.ReceiverFeatures, ErrFTPNotFound)
 }
 
+func (d Detector) TelnetCheck(host, port string) error {
+
+	tel, err := telnet.DialTimeout("tcp", net.JoinHostPort(host, port), d.timeOut)
+	if err != nil {
+		return ErrTelnetNotFound
+	}
+	buf := make([]byte, 10)
+	n, err := tel.Read(buf)
+	if err != nil || n <= 0 {
+		return ErrTelnetNotFound
+	}
+	return nil
+}
+
 func (d Detector) commonCheck(host string, port string,
 	senderPackage []byte, recFeatures []Model.ReceiverFeature, outErr error) error {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), d.timeOut)
@@ -74,6 +93,10 @@ func (d Detector) commonCheck(host string, port string,
 	lastFeature := recFeatures[len(recFeatures)-1]
 	readBytesLen := lastFeature.StartIndex + len(lastFeature.FeatureBytes)
 	var readBuf = make([]byte, readBytesLen)
+	err = conn.SetReadDeadline(time.Now().Add(d.timeOut))
+	if err != nil {
+		return ErrTelnetNotFound
+	}
 	_, err = conn.Read(readBuf)
 	if err != nil {
 		return outErr

@@ -66,3 +66,17 @@ func TestDetector_FTPCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestDetector_TelnetCheck(t *testing.T) {
+	det := NewDetector(timeOut)
+	// change to your FTP IP and port
+	err := det.TelnetCheck("172.20.65.150", "23")
+	if err != nil {
+		t.Fatal(err)
+	}
+	//
+	err = det.TelnetCheck("192.168.200.1", "1")
+	if err != ErrTelnetNotFound {
+		t.Fatal(err)
+	}
+}
