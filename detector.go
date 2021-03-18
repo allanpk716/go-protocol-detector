@@ -6,7 +6,7 @@ import (
 	"github.com/allanpk716/go-protocol-detector/Model"
 	"github.com/allanpk716/go-protocol-detector/RDPFeature"
 	"github.com/allanpk716/go-protocol-detector/SSHFeature"
-	"github.com/ziutek/telnet"
+	"github.com/allanpk716/go-protocol-detector/TelnetFeature"
 	"net"
 	"time"
 )
@@ -65,12 +65,11 @@ func (d Detector) FTPCheck(host, port string) error {
 
 func (d Detector) TelnetCheck(host, port string) error {
 
-	tel, err := telnet.DialTimeout("tcp", net.JoinHostPort(host, port), d.timeOut)
+	tel, err := TelnetFeature.NewTelnetHelper("tcp", net.JoinHostPort(host, port), d.timeOut)
 	if err != nil {
 		return ErrTelnetNotFound
 	}
-	buf := make([]byte, 10)
-	n, err := tel.Read(buf)
+	n, err := tel.Check()
 	if err != nil || n <= 0 {
 		return ErrTelnetNotFound
 	}
