@@ -2,11 +2,13 @@ package Detector
 
 import (
 	"bytes"
+	"github.com/allanpk716/go-protocol-detector/CustomError"
 	"github.com/allanpk716/go-protocol-detector/FTPFeature"
 	"github.com/allanpk716/go-protocol-detector/Model"
 	"github.com/allanpk716/go-protocol-detector/RDPFeature"
 	"github.com/allanpk716/go-protocol-detector/SSHFeature"
 	"github.com/allanpk716/go-protocol-detector/TelnetFeature"
+	"github.com/allanpk716/go-protocol-detector/VNCFeature"
 	"net"
 	"time"
 )
@@ -28,52 +30,37 @@ func NewDetector(timeOut time.Duration) *Detector {
 }
 
 func (d Detector) RDPCheck(host, port string) error {
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), d.timeOut)
-	if err != nil {
-		return ErrRDPNotFound
-	}
-	if conn != nil {
-		defer conn.Close()
-	}
-	_, err = conn.Write(d.rdp.SenderPackage)
-	if err != nil {
-		return ErrRDPNotFound
-	}
-	var readBuf = make([]byte, len(d.rdp.ReceiverFeature))
-	err = conn.SetReadDeadline(time.Now().Add(d.timeOut))
-	if err != nil {
-		return ErrTelnetNotFound
-	}
-	_, err = conn.Read(readBuf)
-	if err != nil {
-		return ErrRDPNotFound
-	}
-	if bytes.Equal(d.rdp.ReceiverFeature, readBuf) == true {
-		return nil
-	} else {
-		return ErrRDPNotFound
-	}
+	return d.commonCheck(host, port, d.rdp.SenderPackage, d.rdp.ReceiverFeatures, CustomError.ErrRDPNotFound)
 }
 
 func (d Detector) SSHCheck(host, port string) error {
-	return d.commonCheck(host, port, d.ssh.SenderPackage, d.ssh.ReceiverFeatures, ErrSSHNotFound)
+	return d.commonCheck(host, port, d.ssh.SenderPackage, d.ssh.ReceiverFeatures, CustomError.ErrSSHNotFound)
 }
 
 func (d Detector) FTPCheck(host, port string) error {
-	return d.commonCheck(host, port, d.ftp.SenderPackage, d.ftp.ReceiverFeatures, ErrFTPNotFound)
+	return d.commonCheck(host, port, d.ftp.SenderPackage, d.ftp.ReceiverFeatures, CustomError.ErrFTPNotFound)
 }
 
 func (d Detector) TelnetCheck(host, port string) error {
 
 	tel, err := TelnetFeature.NewTelnetHelper("tcp", net.JoinHostPort(host, port), d.timeOut)
 	if err != nil {
-		return ErrTelnetNotFound
+		return CustomError.ErrTelnetNotFound
 	}
 	n, err := tel.Check()
 	if err != nil || n <= 0 {
-		return ErrTelnetNotFound
+		return CustomError.ErrTelnetNotFound
 	}
 	return nil
+}
+
+func (d Detector) VNCCheck(host, port string) error {
+
+	vnc, err := VNCFeature.NewVNCHelper("tcp", net.JoinHostPort(host, port), d.timeOut)
+	if err != nil {
+		return CustomError.ErrVNCNotFound
+	}
+	return vnc.Check()
 }
 
 func (d Detector) commonCheck(host string, port string,
@@ -94,7 +81,7 @@ func (d Detector) commonCheck(host string, port string,
 	var readBuf = make([]byte, readBytesLen)
 	err = conn.SetReadDeadline(time.Now().Add(d.timeOut))
 	if err != nil {
-		return ErrTelnetNotFound
+		return CustomError.ErrTelnetNotFound
 	}
 	_, err = conn.Read(readBuf)
 	if err != nil {

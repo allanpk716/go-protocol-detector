@@ -1,8 +1,10 @@
 package RDPFeature
 
+import "github.com/allanpk716/go-protocol-detector/Model"
+
 type RDPHelper struct {
 	SenderPackage		[]byte
-	ReceiverFeature		[]byte
+	ReceiverFeatures	[]Model.ReceiverFeature
 	version				string
 	supportOSVersion	map[string]string
 }
@@ -10,7 +12,12 @@ type RDPHelper struct {
 func NewRDPHelper() *RDPHelper {
 	rdp := RDPHelper{
 		SenderPackage: []byte("\x03\x00\x00\x13\x0e\xe0\x00\x00\x00\x00\x00\x01\x00\x08\x00\x03\x00\x00\x00"),
-		ReceiverFeature: []byte("\x03\x00\x00\x13\x0e"),
+		ReceiverFeatures: []Model.ReceiverFeature{
+			{
+				StartIndex:   0,
+				FeatureBytes: []byte("\x03\x00\x00\x13\x0e"),
+			},
+		},
 		version: "v0.1",
 		supportOSVersion: map[string]string{
 			"2003": "",

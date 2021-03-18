@@ -9,6 +9,7 @@ import (
 type TelnetHelper struct {
 	net.Conn
 	r *bufio.Reader
+	version string
 }
 
 func NewTelnetHelper(network, addr string, timeout time.Duration) (*TelnetHelper, error) {
@@ -19,6 +20,7 @@ func NewTelnetHelper(network, addr string, timeout time.Duration) (*TelnetHelper
 	tel := TelnetHelper{
 		Conn: conn,
 		r:    bufio.NewReaderSize(conn, 256),
+		version: "v0.1",
 	}
 	return &tel, nil
 }

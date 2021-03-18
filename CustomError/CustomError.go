@@ -1,4 +1,4 @@
-package Detector
+package CustomError
 
 import "errors"
 
@@ -7,4 +7,5 @@ var (
 	ErrSSHNotFound = errors.New("ssh not found")
 	ErrFTPNotFound = errors.New("ftp not found")
 	ErrTelnetNotFound = errors.New("telnet not found")
+	ErrVNCNotFound = errors.New("vnc not found")
 )
