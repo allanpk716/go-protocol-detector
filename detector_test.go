@@ -22,7 +22,7 @@ func TestDetector_RDPCheck(t *testing.T) {
 		t.Fatal("rdp Support OS Version is empty")
 	}
 	// change to your PC IP and port
-	err := det.RDPCheck("192.168.200.24", "3389")
+	err := det.RDPCheck("127.0.0.1", "53391")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +84,6 @@ func TestDetector_SFTPCheck(t *testing.T) {
 	}
 }
 
-
 func TestDetector_TelnetCheck(t *testing.T) {
 	det := NewDetector(timeOut)
 	// change to your Telnet IP and port
@@ -108,6 +107,19 @@ func TestDetector_VNCCheck(t *testing.T) {
 	}
 	err = det.VNCCheck("192.168.200.1", "1")
 	if err != CustomError.ErrVNCNotFound {
+		t.Fatal(err)
+	}
+}
+
+func TestDetector_CommonPortCheck(t *testing.T) {
+	det := NewDetector(timeOut)
+	// change to your VNC IP and port
+	err := det.CommonPortCheck("172.20.65.101", "3389")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = det.CommonPortCheck("192.168.200.1", "1")
+	if err != CustomError.ErrCommontPortCheckError {
 		t.Fatal(err)
 	}
 }

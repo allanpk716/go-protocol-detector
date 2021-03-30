@@ -68,6 +68,15 @@ func (d Detector) VNCCheck(host, port string) error {
 	return vnc.Check()
 }
 
+func (d Detector) CommonPortCheck(host, port string) error {
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), d.timeOut)
+	if err != nil {
+		return CustomError.ErrCommontPortCheckError
+	}
+	defer conn.Close()
+	return nil
+}
+
 func (d Detector) commonCheck(host string, port string,
 	senderPackage []byte, recFeatures []Model.ReceiverFeature, outErr error) error {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), d.timeOut)
