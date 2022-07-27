@@ -13,18 +13,19 @@ import (
 	"net"
 	"time"
 )
+
 type Detector struct {
-	rdp		*RDPFeature.RDPHelper
-	ssh		*SSHFeature.SSHHelper
-	ftp		*FTPFeature.FTPHelper
+	rdp     *RDPFeature.RDPHelper
+	ssh     *SSHFeature.SSHHelper
+	ftp     *FTPFeature.FTPHelper
 	timeOut time.Duration
 }
 
 func NewDetector(timeOut time.Duration) *Detector {
 	d := Detector{
-		rdp: RDPFeature.NewRDPHelper(),
-		ssh: SSHFeature.NewSSHHelper(),
-		ftp: FTPFeature.NewFTPHelper(),
+		rdp:     RDPFeature.NewRDPHelper(),
+		ssh:     SSHFeature.NewSSHHelper(),
+		ftp:     FTPFeature.NewFTPHelper(),
 		timeOut: timeOut,
 	}
 	return &d
@@ -83,9 +84,8 @@ func (d Detector) commonCheck(host string, port string,
 	if err != nil {
 		return outErr
 	}
-	if conn != nil {
-		defer conn.Close()
-	}
+	defer conn.Close()
+
 	_, err = conn.Write(senderPackage)
 	if err != nil {
 		return outErr
@@ -93,10 +93,6 @@ func (d Detector) commonCheck(host string, port string,
 	lastFeature := recFeatures[len(recFeatures)-1]
 	readBytesLen := lastFeature.StartIndex + len(lastFeature.FeatureBytes)
 	var readBuf = make([]byte, readBytesLen)
-	err = conn.SetReadDeadline(time.Now().Add(d.timeOut))
-	if err != nil {
-		return CustomError.ErrTelnetNotFound
-	}
 	_, err = conn.Read(readBuf)
 	if err != nil {
 		return outErr
