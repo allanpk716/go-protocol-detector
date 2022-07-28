@@ -1,0 +1,75 @@
+project_name: go-protocol-detector
+
+env:
+  - GO111MODULE=on
+
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - id: linux-amd64-build
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+    main: ./cmd/go-protocol-detector/main.go
+    ldflags:
+      - -s -w --extldflags "-static -fpic"
+
+  - id: linux-armv7-build
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - arm
+    goarm:
+      - 7
+    main: ./cmd/go-protocol-detector/main.go
+    ldflags:
+      - -s -w --extldflags "-static -fpic"
+
+  - id: linux-arm64-build
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - arm64
+    main: ./cmd/go-protocol-detector/main.go
+    ldflags:
+      - -s -w --extldflags "-static -fpic"
+
+  - id: windows-build
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - amd64
+    main: ./cmd/go-protocol-detector/main.go
+    ldflags:
+      - -s -w --extldflags "-static -fpic"
+
+archives:
+  - id: archive
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      amd64: x86_64
+checksum:
+  name_template: "checksums.txt"
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^TestData:"
+      - "^TestCode:"
