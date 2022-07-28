@@ -39,6 +39,12 @@ May be refactored in future use.
 
 ```powershell
 go-protocol-detector --protocol=rdp --host=172.20.65.89-101 --port=3389
+
+go-protocol-detector --protocol=rdp --host=172.20.65.89-101 --port=3389,1024-2000
+
+go-protocol-detector --protocol=sftp --host=172.20.65.89-101 --port=3389 --user=root --password=123
+
+go-protocol-detector --protocol=sftp --host=172.20.65.89-101 --port=3389 --password=123 --prikey=/keys/privatekey
 ```
 
 ## TODO
