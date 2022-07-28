@@ -28,7 +28,10 @@ May be refactored in future use.
 
 ## How to use
 
-See [detector_test.go](https://github.com/allanpk716/go-protocol-detector/blob/master/detector_test.go)
+See:
+
+* [detector_test.go](https://github.com/allanpk716/go-protocol-detector/blob/master/pkg/detector_test.go)
+* [scan_tools_test.go](https://github.com/allanpk716/go-protocol-detector/blob/master/pkg/scan_tools_test.go)
 
 ## TODO
 

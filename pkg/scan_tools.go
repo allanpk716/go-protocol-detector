@@ -27,7 +27,7 @@ func NewScanTools(threads int, timeOut time.Duration) *ScanTools {
 	return scan
 }
 
-func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo) (*OutputInfo, error) {
+func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProgressStep bool) (*OutputInfo, error) {
 
 	d := NewDetector(s.timeOut)
 	p, err := ants.NewPoolWithFunc(s.threads, func(inData interface{}) {
@@ -40,7 +40,10 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo) (*Output
 			Port:         deliveryInfo.Port,
 		}
 		defer func() {
-			println(protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success)
+
+			if showProgressStep == true {
+				println(protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success)
+			}
 			deliveryInfo.CheckResultChan <- checkResult
 			deliveryInfo.Wg.Done()
 		}()
@@ -187,7 +190,10 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo) (*Output
 	defer close(exitRevResultChan)
 	// 使用管道去接收
 	// Host -- {"10, 20"}
-	successMapString := make(map[string][]string, 0)
+	outputInfo := OutputInfo{
+		ProtocolType: protocolType,
+	}
+	outputInfo.SuccessMapString = make(map[string][]string, 0)
 	go func() {
 		for {
 			select {
@@ -196,10 +202,10 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo) (*Output
 					continue
 				}
 
-				if _, ok := successMapString[revCheckResult.Host]; ok {
-					successMapString[revCheckResult.Host] = append(successMapString[revCheckResult.Host], revCheckResult.Port)
+				if _, ok := outputInfo.SuccessMapString[revCheckResult.Host]; ok {
+					outputInfo.SuccessMapString[revCheckResult.Host] = append(outputInfo.SuccessMapString[revCheckResult.Host], revCheckResult.Port)
 				} else {
-					successMapString[revCheckResult.Host] = []string{revCheckResult.Port}
+					outputInfo.SuccessMapString[revCheckResult.Host] = []string{revCheckResult.Port}
 				}
 			case <-exitRevResultChan:
 				return
@@ -240,14 +246,6 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo) (*Output
 	wg.Wait()
 	exitRevResultChan <- true
 
-	outputInfo := OutputInfo{
-		ProtocolType: protocolType,
-		Info:         "",
-	}
-	for s2, i := range successMapString {
-		outputInfo.Info += s2 + ":" + strings.Join(i, ",") + "\r\n"
-	}
-
 	return &outputInfo, nil
 }
 
@@ -284,8 +282,8 @@ type InputInfo struct {
 }
 
 type OutputInfo struct {
-	ProtocolType ProtocolType
-	Info         string
+	ProtocolType     ProtocolType
+	SuccessMapString map[string][]string
 }
 
 type ProtocolType int
