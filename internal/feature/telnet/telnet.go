@@ -1,4 +1,4 @@
-package TelnetFeature
+package telnet
 
 import (
 	"bufio"
@@ -8,7 +8,7 @@ import (
 
 type TelnetHelper struct {
 	net.Conn
-	r *bufio.Reader
+	r       *bufio.Reader
 	version string
 }
 
@@ -18,8 +18,8 @@ func NewTelnetHelper(network, addr string, timeout time.Duration) (*TelnetHelper
 		return nil, err
 	}
 	tel := TelnetHelper{
-		Conn: conn,
-		r:    bufio.NewReaderSize(conn, 256),
+		Conn:    conn,
+		r:       bufio.NewReaderSize(conn, 256),
 		version: "v0.1",
 	}
 	return &tel, nil
@@ -43,7 +43,7 @@ func (t *TelnetHelper) Check() (int, error) {
 			return n, err
 		}
 	}
-	return n ,nil
+	return n, nil
 }
 
 func (t *TelnetHelper) tryReadByte() (b byte, retry bool, err error) {

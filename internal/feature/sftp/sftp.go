@@ -1,7 +1,7 @@
-package SFTPFeature
+package sftp
 
 import (
-	"github.com/allanpk716/go-protocol-detector/CustomError"
+	"github.com/allanpk716/go-protocol-detector/internal/custom_error"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
@@ -10,14 +10,14 @@ import (
 )
 
 type SFTPHelper struct {
-	uri		string
-	timeout  time.Duration
+	uri     string
+	timeout time.Duration
 }
 
 func NewSFTPHelper(host, port string, timeout time.Duration) *SFTPHelper {
 	uri := net.JoinHostPort(host, port)
 	sftpHelper := SFTPHelper{
-		uri: uri,
+		uri:     uri,
 		timeout: timeout,
 	}
 	return &sftpHelper
@@ -56,7 +56,7 @@ func (s SFTPHelper) Check(user, password, priKeyFullPath string) error {
 func (s SFTPHelper) check(user string, authMethod ssh.AuthMethod) error {
 	netConn, err := net.DialTimeout("tcp", s.uri, s.timeout)
 	if err != nil {
-		return CustomError.ErrSFTPNotFound
+		return custom_error.ErrSFTPNotFound
 	}
 	config := &ssh.ClientConfig{
 		User:            user,
@@ -66,17 +66,17 @@ func (s SFTPHelper) check(user string, authMethod ssh.AuthMethod) error {
 	}
 	sshCon, channel, req, err := ssh.NewClientConn(netConn, s.uri, config)
 	if err != nil {
-		return CustomError.ErrSFTPNotFound
+		return custom_error.ErrSFTPNotFound
 	}
 	sshClient := ssh.NewClient(sshCon, channel, req)
 	ftp, err := sftp.NewClient(sshClient)
 	if err != nil {
-		return CustomError.ErrSFTPNotFound
+		return custom_error.ErrSFTPNotFound
 	}
 	// read a directory
 	_, err = ftp.ReadDir("/")
 	if err != nil {
-		return CustomError.ErrSFTPNotFound
+		return custom_error.ErrSFTPNotFound
 	}
 	return nil
 }

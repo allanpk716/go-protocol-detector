@@ -1,19 +1,19 @@
-package FTPFeature
+package ftp
 
 import (
-	"github.com/allanpk716/go-protocol-detector/Model"
+	"github.com/allanpk716/go-protocol-detector/internal/common"
 )
 
 type FTPHelper struct {
-	SenderPackage		[]byte
-	ReceiverFeatures	[]Model.ReceiverFeature
-	version				string
+	SenderPackage    []byte
+	ReceiverFeatures []common.ReceiverFeature
+	version          string
 }
 
 func NewFTPHelper() *FTPHelper {
 	ftp := FTPHelper{
 		SenderPackage: []byte("\r\nUSER wjfR22nDtsd33123Ks36o3q12YJ9rPRrq"),
-		ReceiverFeatures: []Model.ReceiverFeature{
+		ReceiverFeatures: []common.ReceiverFeature{
 			{
 				StartIndex:   0,
 				FeatureBytes: []byte("220"),

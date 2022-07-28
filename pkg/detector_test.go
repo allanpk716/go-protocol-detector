@@ -1,10 +1,11 @@
-package Detector
+package pkg
 
 import (
-	"github.com/allanpk716/go-protocol-detector/CustomError"
+	"github.com/allanpk716/go-protocol-detector/internal/custom_error"
 	"testing"
 	"time"
 )
+
 var (
 	timeOut = 3 * time.Second
 )
@@ -15,10 +16,10 @@ func TestNewDetector(t *testing.T) {
 
 func TestDetector_RDPCheck(t *testing.T) {
 	det := NewDetector(timeOut)
-	if det.rdp.GetVersion() == ""{
+	if det.rdp.GetVersion() == "" {
 		t.Fatal("rdp version is empty")
 	}
-	if len(det.rdp.GetSupportOSVersion()) == 0{
+	if len(det.rdp.GetSupportOSVersion()) == 0 {
 		t.Fatal("rdp Support OS Version is empty")
 	}
 	// change to your PC IP and port
@@ -28,7 +29,7 @@ func TestDetector_RDPCheck(t *testing.T) {
 	}
 	//
 	err = det.RDPCheck("192.168.200.1", "1")
-	if err != CustomError.ErrRDPNotFound {
+	if err != custom_error.ErrRDPNotFound {
 		t.Fatal(err)
 	}
 }
@@ -36,7 +37,7 @@ func TestDetector_RDPCheck(t *testing.T) {
 func TestDetector_SSHCheck(t *testing.T) {
 
 	det := NewDetector(timeOut)
-	if det.ssh.GetVersion() == ""{
+	if det.ssh.GetVersion() == "" {
 		t.Fatal("ssh version is empty")
 	}
 	// change to your PC IP and port
@@ -46,24 +47,24 @@ func TestDetector_SSHCheck(t *testing.T) {
 	}
 	//
 	err = det.SSHCheck("192.168.200.1", "1")
-	if err != CustomError.ErrSSHNotFound {
+	if err != custom_error.ErrSSHNotFound {
 		t.Fatal(err)
 	}
 }
 
 func TestDetector_FTPCheck(t *testing.T) {
 	det := NewDetector(timeOut)
-	if det.ftp.GetVersion() == ""{
+	if det.ftp.GetVersion() == "" {
 		t.Fatal("ftp version is empty")
 	}
-	// change to your FTP IP and port
+	// change to your ftp IP and port
 	err := det.FTPCheck("cdimage.debian.org", "21")
 	if err != nil {
 		t.Fatal(err)
 	}
 	//
 	err = det.FTPCheck("192.168.200.1", "1")
-	if err != CustomError.ErrFTPNotFound {
+	if err != custom_error.ErrFTPNotFound {
 		t.Fatal(err)
 	}
 }
@@ -93,7 +94,7 @@ func TestDetector_TelnetCheck(t *testing.T) {
 	}
 
 	err = det.TelnetCheck("192.168.200.1", "1")
-	if err != CustomError.ErrTelnetNotFound {
+	if err != custom_error.ErrTelnetNotFound {
 		t.Fatal(err)
 	}
 }
@@ -106,7 +107,7 @@ func TestDetector_VNCCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = det.VNCCheck("192.168.200.1", "1")
-	if err != CustomError.ErrVNCNotFound {
+	if err != custom_error.ErrVNCNotFound {
 		t.Fatal(err)
 	}
 }
@@ -119,7 +120,7 @@ func TestDetector_CommonPortCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = det.CommonPortCheck("192.168.200.1", "1")
-	if err != CustomError.ErrCommontPortCheckError {
+	if err != custom_error.ErrCommontPortCheckError {
 		t.Fatal(err)
 	}
 }

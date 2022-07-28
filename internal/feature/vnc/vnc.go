@@ -1,18 +1,18 @@
-package VNCFeature
+package vnc
 
 import (
 	"bytes"
-	"github.com/allanpk716/go-protocol-detector/CustomError"
-	"github.com/allanpk716/go-protocol-detector/Model"
+	"github.com/allanpk716/go-protocol-detector/internal/common"
+	"github.com/allanpk716/go-protocol-detector/internal/custom_error"
 	"net"
 	"time"
 )
 
 type VNCHelper struct {
 	net.Conn
-	ReceiverFeatures	[]Model.ReceiverFeature
-	timeout time.Duration
-	version				string
+	ReceiverFeatures []common.ReceiverFeature
+	timeout          time.Duration
+	version          string
 }
 
 func NewVNCHelper(network, addr string, timeout time.Duration) (*VNCHelper, error) {
@@ -21,9 +21,9 @@ func NewVNCHelper(network, addr string, timeout time.Duration) (*VNCHelper, erro
 		return nil, err
 	}
 	vnc := VNCHelper{
-		Conn: conn,
+		Conn:    conn,
 		timeout: timeout,
-		ReceiverFeatures: []Model.ReceiverFeature{
+		ReceiverFeatures: []common.ReceiverFeature{
 			{
 				StartIndex:   0,
 				FeatureBytes: []byte("RFB "),
@@ -31,7 +31,7 @@ func NewVNCHelper(network, addr string, timeout time.Duration) (*VNCHelper, erro
 		},
 		version: "v0.1",
 	}
-	return &vnc ,nil
+	return &vnc, nil
 }
 
 func (v VNCHelper) GetVersion() string {
@@ -42,16 +42,16 @@ func (v VNCHelper) Check() error {
 
 	err := v.Conn.SetReadDeadline(time.Now().Add(v.timeout))
 	if err != nil {
-		return CustomError.ErrVNCNotFound
+		return custom_error.ErrVNCNotFound
 	}
 	feature := v.ReceiverFeatures[0]
 	var readBuf = make([]byte, len(feature.FeatureBytes))
 	_, err = v.Conn.Read(readBuf)
 	if err != nil {
-		return CustomError.ErrVNCNotFound
+		return custom_error.ErrVNCNotFound
 	}
 	if bytes.Equal(readBuf[feature.StartIndex:feature.StartIndex+len(feature.FeatureBytes)], feature.FeatureBytes) == false {
-		return CustomError.ErrVNCNotFound
+		return custom_error.ErrVNCNotFound
 	}
 	return nil
 }

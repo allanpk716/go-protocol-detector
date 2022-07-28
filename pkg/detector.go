@@ -1,70 +1,70 @@
-package Detector
+package pkg
 
 import (
 	"bytes"
-	"github.com/allanpk716/go-protocol-detector/CustomError"
-	"github.com/allanpk716/go-protocol-detector/FTPFeature"
-	"github.com/allanpk716/go-protocol-detector/Model"
-	"github.com/allanpk716/go-protocol-detector/RDPFeature"
-	"github.com/allanpk716/go-protocol-detector/SFTPFeature"
-	"github.com/allanpk716/go-protocol-detector/SSHFeature"
-	"github.com/allanpk716/go-protocol-detector/TelnetFeature"
-	"github.com/allanpk716/go-protocol-detector/VNCFeature"
+	"github.com/allanpk716/go-protocol-detector/internal/common"
+	"github.com/allanpk716/go-protocol-detector/internal/custom_error"
+	"github.com/allanpk716/go-protocol-detector/internal/feature/ftp"
+	"github.com/allanpk716/go-protocol-detector/internal/feature/rdp"
+	"github.com/allanpk716/go-protocol-detector/internal/feature/sftp"
+	"github.com/allanpk716/go-protocol-detector/internal/feature/ssh"
+	"github.com/allanpk716/go-protocol-detector/internal/feature/telnet"
+	"github.com/allanpk716/go-protocol-detector/internal/feature/vnc"
 	"net"
 	"time"
 )
 
 type Detector struct {
-	rdp     *RDPFeature.RDPHelper
-	ssh     *SSHFeature.SSHHelper
-	ftp     *FTPFeature.FTPHelper
+	rdp     *rdp.RDPHelper
+	ssh     *ssh.SSHHelper
+	ftp     *ftp.FTPHelper
 	timeOut time.Duration
 }
 
 func NewDetector(timeOut time.Duration) *Detector {
 	d := Detector{
-		rdp:     RDPFeature.NewRDPHelper(),
-		ssh:     SSHFeature.NewSSHHelper(),
-		ftp:     FTPFeature.NewFTPHelper(),
+		rdp:     rdp.NewRDPHelper(),
+		ssh:     ssh.NewSSHHelper(),
+		ftp:     ftp.NewFTPHelper(),
 		timeOut: timeOut,
 	}
 	return &d
 }
 
 func (d Detector) RDPCheck(host, port string) error {
-	return d.commonCheck(host, port, d.rdp.SenderPackage, d.rdp.ReceiverFeatures, CustomError.ErrRDPNotFound)
+	return d.commonCheck(host, port, d.rdp.SenderPackage, d.rdp.ReceiverFeatures, custom_error.ErrRDPNotFound)
 }
 
 func (d Detector) SSHCheck(host, port string) error {
-	return d.commonCheck(host, port, d.ssh.SenderPackage, d.ssh.ReceiverFeatures, CustomError.ErrSSHNotFound)
+	return d.commonCheck(host, port, d.ssh.SenderPackage, d.ssh.ReceiverFeatures, custom_error.ErrSSHNotFound)
 }
 
 func (d Detector) FTPCheck(host, port string) error {
-	return d.commonCheck(host, port, d.ftp.SenderPackage, d.ftp.ReceiverFeatures, CustomError.ErrFTPNotFound)
+	return d.commonCheck(host, port, d.ftp.SenderPackage, d.ftp.ReceiverFeatures, custom_error.ErrFTPNotFound)
 }
 
 func (d Detector) SFTPCheck(host, port, user, password, privateKeyFullPath string) error {
-	return SFTPFeature.NewSFTPHelper(host, port, d.timeOut).Check(user, password, privateKeyFullPath)
+	return sftp.NewSFTPHelper(host, port, d.timeOut).Check(user, password, privateKeyFullPath)
 }
 
 func (d Detector) TelnetCheck(host, port string) error {
 
-	tel, err := TelnetFeature.NewTelnetHelper("tcp", net.JoinHostPort(host, port), d.timeOut)
+	tel, err := telnet.NewTelnetHelper("tcp", net.JoinHostPort(host, port), d.timeOut)
 	if err != nil {
-		return CustomError.ErrTelnetNotFound
+		return custom_error.ErrTelnetNotFound
 	}
 	n, err := tel.Check()
 	if err != nil || n <= 0 {
-		return CustomError.ErrTelnetNotFound
+		return custom_error.ErrTelnetNotFound
 	}
 	return nil
 }
 
 func (d Detector) VNCCheck(host, port string) error {
 
-	vnc, err := VNCFeature.NewVNCHelper("tcp", net.JoinHostPort(host, port), d.timeOut)
+	vnc, err := vnc.NewVNCHelper("tcp", net.JoinHostPort(host, port), d.timeOut)
 	if err != nil {
-		return CustomError.ErrVNCNotFound
+		return custom_error.ErrVNCNotFound
 	}
 	return vnc.Check()
 }
@@ -72,14 +72,14 @@ func (d Detector) VNCCheck(host, port string) error {
 func (d Detector) CommonPortCheck(host, port string) error {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), d.timeOut)
 	if err != nil {
-		return CustomError.ErrCommontPortCheckError
+		return custom_error.ErrCommontPortCheckError
 	}
 	defer conn.Close()
 	return nil
 }
 
 func (d Detector) commonCheck(host string, port string,
-	senderPackage []byte, recFeatures []Model.ReceiverFeature, outErr error) error {
+	senderPackage []byte, recFeatures []common.ReceiverFeature, outErr error) error {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), d.timeOut)
 	if err != nil {
 		return outErr
