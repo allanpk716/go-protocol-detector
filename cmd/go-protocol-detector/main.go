@@ -22,12 +22,14 @@ var (
 	priKeyFullPath string
 )
 
+var AppVersion = "unknow"
+
 func main() {
 	app := &cli.App{
 		Name:        "go-protocol-detector",
 		Usage:       "use like: go-protocol-detector --protocol=rdp --host=172.20.65.89-101 --port=3389",
 		Description: "Multi-protocol scan tool",
-		Version:     "v0.1.0",
+		Version:     AppVersion,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "protocol",
