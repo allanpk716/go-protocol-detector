@@ -371,7 +371,7 @@ const (
 	SFTP
 	Telnet
 	VNC
-	CommonPort
+	Common
 )
 
 func (p ProtocolType) String() string {
@@ -388,9 +388,30 @@ func (p ProtocolType) String() string {
 		return "telnet"
 	case VNC:
 		return "vnc"
-	case CommonPort:
-		return "commonPort"
+	case Common:
+		return "common"
 	default:
 		return "unknown"
+	}
+}
+
+func String2ProcotolType(input string) ProtocolType {
+	switch input {
+	case "rdp":
+		return RDP
+	case "ssh":
+		return SSH
+	case "ftp":
+		return FTP
+	case "sftp":
+		return SFTP
+	case "telnet":
+		return Telnet
+	case "vnc":
+		return VNC
+	case "common":
+		return Common
+	default:
+		return Common
 	}
 }
