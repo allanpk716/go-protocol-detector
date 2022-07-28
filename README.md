@@ -28,10 +28,18 @@ May be refactored in future use.
 
 ## How to use
 
-See:
+### Use From Code:
 
 * [detector_test.go](https://github.com/allanpk716/go-protocol-detector/blob/master/pkg/detector_test.go)
 * [scan_tools_test.go](https://github.com/allanpk716/go-protocol-detector/blob/master/pkg/scan_tools_test.go)
+
+### Use From Executable Program:
+
+[Releases](https://github.com/allanpk716/go-protocol-detector/releases)
+
+```powershell
+go-protocol-detector --protocol=rdp --host=172.20.65.89-101 --port=3389
+```
 
 ## TODO
 
