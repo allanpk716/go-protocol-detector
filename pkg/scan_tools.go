@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"fmt"
+	"github.com/3th1nk/cidr"
 	"github.com/panjf2000/ants/v2"
 	"net"
 	"strconv"
@@ -101,86 +102,22 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 	}
 	defer p.Release()
 	// --------------------------------------------------
-	// 解析 InputInfo Host 和 Port 的信息
+	// 解析 InputInfo Host
 	if inputInfo.Host == "" {
 		return nil, fmt.Errorf("scan - Host is empty")
 	}
-	ipRangeInfo := IPRangeInfo{}
-	{
-		ipSplit := strings.Split(inputInfo.Host, "-")
-		if len(ipSplit) > 2 {
-			return nil, fmt.Errorf("scan - InputInfo Host Split Error: %s", inputInfo.Host)
-		} else if len(ipSplit) == 2 {
-			// 说明是 192.168.50.123-200 格式
-			address := net.ParseIP(ipSplit[0])
-			if address == nil {
-				return nil, fmt.Errorf("scan - InputInfo Host ParseIP Error: %v", ipSplit[0])
-			}
-			parts := strings.Split(ipSplit[0], ".")
-			if len(parts) != 4 {
-				return nil, fmt.Errorf("scan - InputInfo Host Split Error: %v", ipSplit[0])
-			}
-			var startIndex, endIndex int
-			startIndex, err = strconv.Atoi(parts[3])
-			if err != nil {
-				return nil, fmt.Errorf("scan - InputInfo Host Atoi Error: %v", ipSplit[0])
-			}
-
-			endIndex, err = strconv.Atoi(ipSplit[1])
-			if err != nil {
-				return nil, fmt.Errorf("scan - InputInfo Host Atoi Error: %v", ipSplit[1])
-			}
-			ipRangeInfo.Begin = address
-			ipRangeInfo.CountNextTime = endIndex - startIndex + 1
-		} else {
-			// 说明是单个 IP 格式
-			address := net.ParseIP(ipSplit[0])
-			if address == nil {
-				return nil, fmt.Errorf("scan - InputInfo Host ParseIP Error")
-			}
-			ipRangeInfo.Begin = address
-			ipRangeInfo.CountNextTime = 1
-		}
+	ipRangeInfos, err := s.parseHost(inputInfo.Host)
+	if err != nil {
+		return nil, err
 	}
 	// --------------------------------------------------
 	// 解析 InputInfo Port 的信息
-	// 可能切割出来的 port 是 20-30 这样的格式，需要在内部再次判断
-	portList := make([]int, 0)
-	{
-		tmpPorts := make([]string, 0)
-		if inputInfo.Port == "" {
-			return nil, fmt.Errorf("scan - InputInfo Port is empty")
-		}
-		tmpPorts = strings.Split(inputInfo.Port, ",")
-		for _, port := range tmpPorts {
-			portSplit := strings.Split(port, "-")
-			if len(portSplit) > 2 {
-				return nil, fmt.Errorf("scan - InputInfo Port Split Error: %s", inputInfo.Port)
-			} else if len(portSplit) == 2 {
-				// 说明是 20-30 这样的格式
-				startPort, err := strconv.Atoi(portSplit[0])
-				if err != nil {
-					return nil, fmt.Errorf("scan - InputInfo Port Atoi Error: %v", portSplit[0])
-				}
-				endPort, err := strconv.Atoi(portSplit[1])
-				if err != nil {
-					return nil, fmt.Errorf("scan - InputInfo Port Atoi Error: %v", portSplit[1])
-				}
-				if startPort > endPort {
-					return nil, fmt.Errorf("scan - InputInfo Port Error: %v", portSplit[0])
-				}
-				for i := startPort; i <= endPort; i++ {
-					portList = append(portList, i)
-				}
-			} else {
-				// 说明是单个端口格式
-				portInt, err := strconv.Atoi(port)
-				if err != nil {
-					return nil, fmt.Errorf("scan - InputInfo Port Atoi Error: %v", port)
-				}
-				portList = append(portList, portInt)
-			}
-		}
+	if inputInfo.Port == "" {
+		return nil, fmt.Errorf("scan - InputInfo Port is empty")
+	}
+	ports, err := s.parsePort(inputInfo.Port)
+	if err != nil {
+		return nil, err
 	}
 	// --------------------------------------------------
 	// 开始扫描
@@ -188,6 +125,7 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 	defer close(checkResultChan)
 	exitRevResultChan := make(chan bool, 1)
 	defer close(exitRevResultChan)
+	// --------------------------------------------------
 	// 使用管道去接收
 	// Host -- {"10, 20"}
 	outputInfo := OutputInfo{
@@ -201,7 +139,6 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 				if revCheckResult.Success == false {
 					continue
 				}
-
 				if _, ok := outputInfo.SuccessMapString[revCheckResult.Host]; ok {
 					outputInfo.SuccessMapString[revCheckResult.Host] = append(outputInfo.SuccessMapString[revCheckResult.Host], revCheckResult.Port)
 				} else {
@@ -214,44 +151,183 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 	}()
 	// --------------------------------------------------
 	wg := &sync.WaitGroup{}
-	startIP := ipRangeInfo.Begin
-	for i := 0; i < ipRangeInfo.CountNextTime; i++ {
 
-		if i != 0 {
-			startIP.To4()[3] += uint8(1)
-		}
-		for _, port := range portList {
+	for _, ipRangeInfo := range ipRangeInfos {
 
-			wg.Add(1)
-			// 单个 port 格式
-			err = p.Invoke(DeliveryInfo{
-				Detector:           d,
-				ProtocolType:       protocolType,
-				Host:               startIP.String(),
-				Port:               fmt.Sprintf("%d", port),
-				User:               inputInfo.User,
-				Password:           inputInfo.Password,
-				PrivateKeyFullPath: inputInfo.PrivateKeyFullPath,
-				CheckResultChan:    checkResultChan,
-				Wg:                 wg,
+		if ipRangeInfo.CICR != nil {
+			// 使用 CICR 去遍历
+			err = ipRangeInfo.CICR.ForEachIP(func(ip string) error {
+				for _, port := range ports {
+
+					wg.Add(1)
+					// 单个 port 格式
+					err = p.Invoke(DeliveryInfo{
+						Detector:           d,
+						ProtocolType:       protocolType,
+						Host:               ip,
+						Port:               fmt.Sprintf("%d", port),
+						User:               inputInfo.User,
+						Password:           inputInfo.Password,
+						PrivateKeyFullPath: inputInfo.PrivateKeyFullPath,
+						CheckResultChan:    checkResultChan,
+						Wg:                 wg,
+					})
+					if err != nil {
+						wg.Done()
+						return err
+					}
+				}
+				return nil
 			})
 			if err != nil {
-				wg.Done()
-				return nil, fmt.Errorf("scan - Invoke Error: %v", err)
+				return nil, fmt.Errorf("scan - ForEachIP error: %s", err.Error())
 			}
+		} else {
+			// 使用内置的段规则去遍历
+			startIP := ipRangeInfo.Begin
+			for i := 0; i < ipRangeInfo.CountNextTime; i++ {
 
+				if i != 0 {
+					startIP.To4()[3] += uint8(1)
+				}
+				for _, port := range ports {
+
+					wg.Add(1)
+					// 单个 port 格式
+					err = p.Invoke(DeliveryInfo{
+						Detector:           d,
+						ProtocolType:       protocolType,
+						Host:               startIP.String(),
+						Port:               fmt.Sprintf("%d", port),
+						User:               inputInfo.User,
+						Password:           inputInfo.Password,
+						PrivateKeyFullPath: inputInfo.PrivateKeyFullPath,
+						CheckResultChan:    checkResultChan,
+						Wg:                 wg,
+					})
+					if err != nil {
+						wg.Done()
+						return nil, fmt.Errorf("scan - Invoke Error: %v", err)
+					}
+				}
+			}
 		}
 	}
-
 	wg.Wait()
 	exitRevResultChan <- true
 
 	return &outputInfo, nil
 }
 
+// parseHost 解析 Host 输入的信息 192.168.0.1,192.168.50.1-254,192.168.31.0/24
+func (s ScanTools) parseHost(inputHostString string) ([]IPRangeInfo, error) {
+
+	var err error
+	parsedHostList := make([]IPRangeInfo, 0)
+	// 先使用 , 进行分割
+	hostList := strings.Split(inputHostString, ",")
+	for _, oneHostString := range hostList {
+
+		ipRangeInfo := IPRangeInfo{}
+		if strings.Contains(oneHostString, "/") {
+			// CICR 地址类型
+			ipRangeInfo.CICR, err = cidr.ParseCIDR(oneHostString)
+			if err != nil {
+				return nil, fmt.Errorf("parseHost - ParseCIDR Error: %v", err)
+			}
+
+			parsedHostList = append(parsedHostList, ipRangeInfo)
+
+		} else if strings.Contains(oneHostString, "-") {
+			// 简易的 192.168.1.1-254
+
+			ipSplit := strings.Split(inputHostString, "-")
+			if len(ipSplit) > 2 {
+				return nil, fmt.Errorf("scan - InputInfo Host Split Error: %s", inputHostString)
+			} else if len(ipSplit) == 2 {
+				// 说明是 192.168.50.123-200 格式
+				address := net.ParseIP(ipSplit[0])
+				if address == nil {
+					return nil, fmt.Errorf("scan - InputInfo Host ParseIP Error: %v", ipSplit[0])
+				}
+				parts := strings.Split(ipSplit[0], ".")
+				if len(parts) != 4 {
+					return nil, fmt.Errorf("scan - InputInfo Host Split Error: %v", ipSplit[0])
+				}
+				var startIndex, endIndex int
+				startIndex, err = strconv.Atoi(parts[3])
+				if err != nil {
+					return nil, fmt.Errorf("scan - InputInfo Host Atoi Error: %v", ipSplit[0])
+				}
+
+				endIndex, err = strconv.Atoi(ipSplit[1])
+				if err != nil {
+					return nil, fmt.Errorf("scan - InputInfo Host Atoi Error: %v", ipSplit[1])
+				}
+				ipRangeInfo.Begin = address
+				ipRangeInfo.CountNextTime = endIndex - startIndex + 1
+			}
+			parsedHostList = append(parsedHostList, ipRangeInfo)
+
+		} else {
+			// 单个 IP 地址
+			address := net.ParseIP(oneHostString)
+			if address == nil {
+				return nil, fmt.Errorf("scan - InputInfo Host ParseIP Error")
+			}
+			ipRangeInfo.Begin = address
+			ipRangeInfo.CountNextTime = 1
+			parsedHostList = append(parsedHostList, ipRangeInfo)
+
+		}
+	}
+
+	return parsedHostList, nil
+}
+
+// parsePort 解析 Port 输入的信息 80,8080,8000-8100
+func (s ScanTools) parsePort(inputPortString string) ([]int, error) {
+
+	portList := make([]int, 0)
+	tmpPorts := make([]string, 0)
+	tmpPorts = strings.Split(inputPortString, ",")
+	for _, port := range tmpPorts {
+		portSplit := strings.Split(port, "-")
+		if len(portSplit) > 2 {
+			return nil, fmt.Errorf("scan - InputInfo Port Split Error: %s", port)
+		} else if len(portSplit) == 2 {
+			// 说明是 20-30 这样的格式
+			startPort, err := strconv.Atoi(portSplit[0])
+			if err != nil {
+				return nil, fmt.Errorf("scan - InputInfo Port Atoi Error: %v", portSplit[0])
+			}
+			endPort, err := strconv.Atoi(portSplit[1])
+			if err != nil {
+				return nil, fmt.Errorf("scan - InputInfo Port Atoi Error: %v", portSplit[1])
+			}
+			if startPort > endPort {
+				return nil, fmt.Errorf("scan - InputInfo Port Error: %v", portSplit[0])
+			}
+			for i := startPort; i <= endPort; i++ {
+				portList = append(portList, i)
+			}
+		} else {
+			// 说明是单个端口格式
+			portInt, err := strconv.Atoi(port)
+			if err != nil {
+				return nil, fmt.Errorf("scan - InputInfo Port Atoi Error: %v", port)
+			}
+			portList = append(portList, portInt)
+		}
+	}
+
+	return portList, nil
+}
+
 type IPRangeInfo struct {
 	Begin         net.IP
 	CountNextTime int
+	CICR          *cidr.CIDR
 }
 
 type DeliveryInfo struct {

@@ -67,6 +67,36 @@ func TestScanTools_Scan(t *testing.T) {
 			},
 			want: nil,
 		},
+		{
+			name: "TestScanTools_Scan_2_IP",
+			fields: fields{
+				threads: 20,
+				timeOut: time.Second * 2,
+			},
+			args: args{
+				protocolType: RDP,
+				inputInfo: InputInfo{
+					Host: "172.20.65.89,172.20.65.101",
+					Port: "3389",
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "TestScanTools_Scan_CICR",
+			fields: fields{
+				threads: 20,
+				timeOut: time.Second * 2,
+			},
+			args: args{
+				protocolType: RDP,
+				inputInfo: InputInfo{
+					Host: "172.20.65.0/24",
+					Port: "3389",
+				},
+			},
+			want: nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
