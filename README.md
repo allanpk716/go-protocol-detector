@@ -38,13 +38,44 @@ May be refactored in future use.
 [Releases](https://github.com/allanpk716/go-protocol-detector/releases)
 
 ```powershell
+NAME:
+   go-protocol-detector - use like: go-protocol-detector --protocol=rdp --host=172.20.65.89-101 --port=3389
+
+USAGE:
+   go-protocol-detector [global options] command [command options] [arguments...]
+
+VERSION:
+   v0.10.0
+
+DESCRIPTION:
+   Multi-protocol scan tool
+
+COMMANDS:
+   help, h  Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --help, -h        show help (default: false)
+   --host value      support 3 diffs types: 192.168.1.1,192.168.1.100-254,192.168.1.0/24 (default: "192.168.1.1")
+   --password value  if you scan sftp, need give a Password: root (default: "root")
+   --port value      support like: 22,80,443,3380-3390 (default: "22")
+   --prikey value    if you scan sftp, need give a pri key Full Path( user name or this priKeyFPath only chose one): ~/.ssh/id_rsa (default: "~/.ssh/id_rsa")
+   --protocol value  select only one protocol: rdp | ssh | ftp | sftp | telnet | vnc | common (default: "common")
+   --thread value    10 (default: 10)
+   --timeout value   1000 ms (default: 1000)
+   --user value      if you scan sftp, need give a UserName: root (default: "root")
+   --version, -v     print the version (default: false)
+```
+
+Example:
+
+```powershell
 go-protocol-detector --protocol=rdp --host=172.20.65.89-101 --port=3389
 
 go-protocol-detector --protocol=rdp --host=172.20.65.89-101 --port=3389,1024-2000
 
 go-protocol-detector --protocol=sftp --host=172.20.65.89-101 --port=3389 --user=root --password=123
 
-go-protocol-detector --protocol=sftp --host=172.20.65.89-101 --port=3389 --password=123 --prikey=/keys/privatekey
+go-protocol-detector --protocol=sftp --host=172.20.65.1/24 --port=3389 --password=123 --prikey=/keys/privatekey
 ```
 
 ## TODO
