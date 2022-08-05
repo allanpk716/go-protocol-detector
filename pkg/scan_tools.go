@@ -132,17 +132,23 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 		ProtocolType: protocolType,
 	}
 	outputInfo.SuccessMapString = make(map[string][]string, 0)
+	outputInfo.FailedMapString = make(map[string][]string, 0)
 	go func() {
 		for {
 			select {
 			case revCheckResult := <-checkResultChan:
 				if revCheckResult.Success == false {
-					continue
-				}
-				if _, ok := outputInfo.SuccessMapString[revCheckResult.Host]; ok {
-					outputInfo.SuccessMapString[revCheckResult.Host] = append(outputInfo.SuccessMapString[revCheckResult.Host], revCheckResult.Port)
+					if _, ok := outputInfo.FailedMapString[revCheckResult.Host]; ok {
+						outputInfo.FailedMapString[revCheckResult.Host] = append(outputInfo.FailedMapString[revCheckResult.Host], revCheckResult.Port)
+					} else {
+						outputInfo.FailedMapString[revCheckResult.Host] = []string{revCheckResult.Port}
+					}
 				} else {
-					outputInfo.SuccessMapString[revCheckResult.Host] = []string{revCheckResult.Port}
+					if _, ok := outputInfo.SuccessMapString[revCheckResult.Host]; ok {
+						outputInfo.SuccessMapString[revCheckResult.Host] = append(outputInfo.SuccessMapString[revCheckResult.Host], revCheckResult.Port)
+					} else {
+						outputInfo.SuccessMapString[revCheckResult.Host] = []string{revCheckResult.Port}
+					}
 				}
 			case <-exitRevResultChan:
 				return
@@ -360,6 +366,7 @@ type InputInfo struct {
 type OutputInfo struct {
 	ProtocolType     ProtocolType
 	SuccessMapString map[string][]string
+	FailedMapString  map[string][]string
 }
 
 type ProtocolType int
