@@ -46,7 +46,7 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 				println(protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success)
 			}
 			deliveryInfo.CheckResultChan <- checkResult
-			deliveryInfo.Wg.Done()
+			//deliveryInfo.Wg.Done()
 		}()
 
 		switch protocolType {
@@ -131,6 +131,7 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 	outputInfo := OutputInfo{
 		ProtocolType: protocolType,
 	}
+	wg := &sync.WaitGroup{}
 	outputInfo.SuccessMapString = make(map[string][]string, 0)
 	outputInfo.FailedMapString = make(map[string][]string, 0)
 	go func() {
@@ -150,14 +151,13 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 						outputInfo.SuccessMapString[revCheckResult.Host] = []string{revCheckResult.Port}
 					}
 				}
+				wg.Done()
 			case <-exitRevResultChan:
 				return
 			}
 		}
 	}()
 	// --------------------------------------------------
-	wg := &sync.WaitGroup{}
-
 	for _, ipRangeInfo := range ipRangeInfos {
 
 		if ipRangeInfo.CICR != nil {
