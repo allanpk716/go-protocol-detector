@@ -82,6 +82,12 @@ go-protocol-detector --protocol=sftp --host=172.20.65.1/24 --port=3389 --passwor
 
 - [ ] SFTP detected by [gopacket](https://github.com/google/gopacket)
 
+## Give a reward
+
+If the tools I have made are of some help to you, you can buy me a cup of coffee or sponsor a little server fee.
+
+![收款码](ReadMeThings/pics/收款码.png)
+
 ## How to implement
 
 [[中文教程]](https://github.com/allanpk716/go-protocol-detector/blob/master/ReadMeThings/readme_cn_tutorial.md)

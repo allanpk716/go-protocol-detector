@@ -37,6 +37,12 @@
 
 [[中文教程]](https://github.com/allanpk716/go-protocol-detector/blob/master/ReadMeThings/readme_cn_tutorial.md)
 
+## 打赏
+
+如果本人做的工具对你有一些帮助，可以请我喝一杯咖啡，或者赞助一点服务器费用。
+
+![收款码](pics/收款码.png)
+
 ## 致谢
 
 * [ziutek/telnet](ziutek/telnet)
