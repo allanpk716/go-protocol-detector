@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/allanpk716/go-protocol-detector/pkg"
+	"github.com/TheBestLL/go-protocol-detector/pkg"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"

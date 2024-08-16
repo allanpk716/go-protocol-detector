@@ -1,7 +1,7 @@
 package rdp
 
 import (
-	"github.com/allanpk716/go-protocol-detector/internal/common"
+	"github.com/TheBestLL/go-protocol-detector/internal/common"
 )
 
 type RDPHelper struct {

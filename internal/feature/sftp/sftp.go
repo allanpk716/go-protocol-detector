@@ -1,7 +1,7 @@
 package sftp
 
 import (
-	"github.com/allanpk716/go-protocol-detector/internal/custom_error"
+	"github.com/TheBestLL/go-protocol-detector/internal/custom_error"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
