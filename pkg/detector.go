@@ -2,6 +2,9 @@ package pkg
 
 import (
 	"bytes"
+	"net"
+	"time"
+
 	"github.com/allanpk716/go-protocol-detector/internal/common"
 	"github.com/allanpk716/go-protocol-detector/internal/custom_error"
 	"github.com/allanpk716/go-protocol-detector/internal/feature/ftp"
@@ -10,8 +13,6 @@ import (
 	"github.com/allanpk716/go-protocol-detector/internal/feature/ssh"
 	"github.com/allanpk716/go-protocol-detector/internal/feature/telnet"
 	"github.com/allanpk716/go-protocol-detector/internal/feature/vnc"
-	"net"
-	"time"
 )
 
 type Detector struct {
@@ -85,7 +86,8 @@ func (d Detector) commonCheck(host string, port string,
 		return outErr
 	}
 	defer conn.Close()
-
+	conn.SetReadDeadline(time.Now().Add(d.timeOut))
+	conn.SetWriteDeadline(time.Now().Add(d.timeOut))
 	_, err = conn.Write(senderPackage)
 	if err != nil {
 		return outErr
@@ -99,7 +101,7 @@ func (d Detector) commonCheck(host string, port string,
 	}
 	// according to the features
 	for _, feature := range recFeatures {
-		if bytes.Equal(readBuf[feature.StartIndex:feature.StartIndex+len(feature.FeatureBytes)], feature.FeatureBytes) == false {
+		if !bytes.Equal(readBuf[feature.StartIndex:feature.StartIndex+len(feature.FeatureBytes)], feature.FeatureBytes) {
 			return outErr
 		}
 	}
