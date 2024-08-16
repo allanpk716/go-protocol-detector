@@ -27,7 +27,7 @@
 
 ## 如何使用
 
-看测试用例 [detector_test.go](https://github.com/allanpk716/go-protocol-detector/blob/master/detector_test.go)
+看测试用例 [detector_test.go](https://go-protocol-detector/blob/master/detector_test.go)
 
 ## TODO
 
@@ -35,7 +35,7 @@
 
 ## 如何实现的
 
-[[中文教程]](https://github.com/allanpk716/go-protocol-detector/blob/master/ReadMeThings/readme_cn_tutorial.md)
+[[中文教程]](https://go-protocol-detector/blob/master/ReadMeThings/readme_cn_tutorial.md)
 
 ## 打赏
 

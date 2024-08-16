@@ -2,8 +2,8 @@ package vnc
 
 import (
 	"bytes"
-	"github.com/allanpk716/go-protocol-detector/internal/common"
-	"github.com/allanpk716/go-protocol-detector/internal/custom_error"
+	"go-protocol-detector/internal/common"
+	"go-protocol-detector/internal/custom_error"
 	"net"
 	"time"
 )

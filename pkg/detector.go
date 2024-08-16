@@ -5,14 +5,14 @@ import (
 	"net"
 	"time"
 
-	"github.com/allanpk716/go-protocol-detector/internal/common"
-	"github.com/allanpk716/go-protocol-detector/internal/custom_error"
-	"github.com/allanpk716/go-protocol-detector/internal/feature/ftp"
-	"github.com/allanpk716/go-protocol-detector/internal/feature/rdp"
-	"github.com/allanpk716/go-protocol-detector/internal/feature/sftp"
-	"github.com/allanpk716/go-protocol-detector/internal/feature/ssh"
-	"github.com/allanpk716/go-protocol-detector/internal/feature/telnet"
-	"github.com/allanpk716/go-protocol-detector/internal/feature/vnc"
+	"go-protocol-detector/internal/common"
+	"go-protocol-detector/internal/custom_error"
+	"go-protocol-detector/internal/feature/ftp"
+	"go-protocol-detector/internal/feature/rdp"
+	"go-protocol-detector/internal/feature/sftp"
+	"go-protocol-detector/internal/feature/ssh"
+	"go-protocol-detector/internal/feature/telnet"
+	"go-protocol-detector/internal/feature/vnc"
 )
 
 type Detector struct {

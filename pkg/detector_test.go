@@ -1,7 +1,7 @@
 package pkg
 
 import (
-	"github.com/allanpk716/go-protocol-detector/internal/custom_error"
+	"go-protocol-detector/internal/custom_error"
 	"testing"
 	"time"
 )

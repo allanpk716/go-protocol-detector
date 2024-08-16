@@ -1,7 +1,7 @@
 package ftp
 
 import (
-	"github.com/allanpk716/go-protocol-detector/internal/common"
+	"go-protocol-detector/internal/common"
 )
 
 type FTPHelper struct {
