@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__web-search-prime__webSearchPrime",
+      "WebFetch(domain:goreleaser.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
