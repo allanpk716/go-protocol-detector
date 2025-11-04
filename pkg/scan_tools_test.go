@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"log"
 	"strings"
 	"testing"
 	"time"
@@ -113,7 +114,7 @@ func TestScanTools_Scan(t *testing.T) {
 				info += s2 + ":" + strings.Join(i, ",") + "\r\n"
 			}
 
-			println("Found", tt.args.protocolType.String(), info)
+			log.Printf("Found %s %s", tt.args.protocolType.String(), info)
 		})
 	}
 }

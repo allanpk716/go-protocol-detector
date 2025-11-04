@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -22,7 +23,7 @@ func NewScanTools(threads int, timeOut time.Duration) *ScanTools {
 	scan := &ScanTools{threads: threads, timeOut: timeOut}
 	if scan.threads > 1000 {
 		scan.threads = 1000
-		println("threads is set to 1000")
+		log.Println("threads is set to 1000")
 	}
 	if scan.timeOut == 0 {
 		scan.timeOut = time.Second * 2
@@ -45,7 +46,7 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 		defer func() {
 
 			if showProgressStep == true {
-				println(protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success)
+				log.Printf("%s %s:%d %v", protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success)
 			}
 			deliveryInfo.CheckResultChan <- checkResult
 			deliveryInfo.Wg.Done() // 确保在所有情况下都调用Done()，防止goroutine泄漏

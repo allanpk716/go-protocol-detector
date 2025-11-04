@@ -95,13 +95,13 @@ func main() {
 				return err
 			}
 
-			println("==========================================================")
+			log.Println("==========================================================")
 			info := protocol + " Scan Result: \r\n"
 			for s2, i := range outputInfo.SuccessMapString {
 				info += s2 + ":" + strings.Join(i, ",") + "\r\n"
 			}
 			fmt.Print(info)
-			println("==========================================================")
+			log.Println("==========================================================")
 			return nil
 		},
 	}
