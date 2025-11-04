@@ -2,13 +2,14 @@ package pkg
 
 import (
 	"fmt"
-	"github.com/3th1nk/cidr"
-	"github.com/panjf2000/ants/v2"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/3th1nk/cidr"
+	"github.com/panjf2000/ants/v2"
 )
 
 type ScanTools struct {
@@ -19,8 +20,9 @@ type ScanTools struct {
 func NewScanTools(threads int, timeOut time.Duration) *ScanTools {
 
 	scan := &ScanTools{threads: threads, timeOut: timeOut}
-	if scan.threads > 10 {
-		scan.threads = 10
+	if scan.threads > 1000 {
+		scan.threads = 1000
+		println("threads is set to 1000")
 	}
 	if scan.timeOut == 0 {
 		scan.timeOut = time.Second * 2
