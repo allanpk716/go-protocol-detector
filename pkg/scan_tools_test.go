@@ -101,10 +101,7 @@ func TestScanTools_Scan(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := ScanTools{
-				threads: tt.fields.threads,
-				timeOut: tt.fields.timeOut,
-			}
+			s := NewScanTools(tt.fields.threads, tt.fields.timeOut)
 			got, err := s.Scan(tt.args.protocolType, tt.args.inputInfo, true)
 			if err != nil {
 				t.Fatal(err)

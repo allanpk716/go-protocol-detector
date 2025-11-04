@@ -39,10 +39,10 @@ func TestParsePort_Validation(t *testing.T) {
 			expectedLen: 14,
 		},
 		{
-			name:        "port too low",
+			name:        "port 0 valid",
 			input:       "0",
-			expectError: true,
-			expectedLen: 0,
+			expectError: false,
+			expectedLen: 1,
 		},
 		{
 			name:        "port too high",
@@ -51,10 +51,10 @@ func TestParsePort_Validation(t *testing.T) {
 			expectedLen: 0,
 		},
 		{
-			name:        "range with port too low",
+			name:        "range with port 0 valid",
 			input:       "0-100",
-			expectError: true,
-			expectedLen: 0,
+			expectError: false,
+			expectedLen: 101,
 		},
 		{
 			name:        "range with port too high",
