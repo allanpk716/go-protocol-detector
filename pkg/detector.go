@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"bytes"
+	"io"
 	"github.com/allanpk716/go-protocol-detector/internal/common"
 	"github.com/allanpk716/go-protocol-detector/internal/custom_error"
 	"github.com/allanpk716/go-protocol-detector/internal/feature/ftp"
@@ -92,8 +93,26 @@ func (d Detector) commonCheck(host string, port string,
 	}
 	lastFeature := recFeatures[len(recFeatures)-1]
 	readBytesLen := lastFeature.StartIndex + len(lastFeature.FeatureBytes)
+
+	// 添加网络读取安全限制
+	maxReadSize := 4096 // 最大读取4KB
+	if readBytesLen > maxReadSize {
+		return outErr
+	}
+	if readBytesLen <= 0 {
+		return outErr
+	}
+
 	var readBuf = make([]byte, readBytesLen)
-	_, err = conn.Read(readBuf)
+
+	// 设置读取超时，防止阻塞
+	err = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	if err != nil {
+		return outErr
+	}
+
+	// 使用io.ReadFull确保读取指定大小的数据或返回错误
+	_, err = io.ReadFull(conn, readBuf)
 	if err != nil {
 		return outErr
 	}

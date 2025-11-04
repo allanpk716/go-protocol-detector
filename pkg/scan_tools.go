@@ -48,7 +48,7 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 				println(protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success)
 			}
 			deliveryInfo.CheckResultChan <- checkResult
-			//deliveryInfo.Wg.Done()
+			deliveryInfo.Wg.Done() // 确保在所有情况下都调用Done()，防止goroutine泄漏
 		}()
 
 		switch protocolType {
@@ -136,10 +136,15 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 	wg := &sync.WaitGroup{}
 	outputInfo.SuccessMapString = make(map[string][]string, 0)
 	outputInfo.FailedMapString = make(map[string][]string, 0)
+
+	// 互斥锁保护map操作
+	var resultMapMutex sync.RWMutex
 	go func() {
 		for {
 			select {
 			case revCheckResult := <-checkResultChan:
+				// 使用写锁保护map操作，防止并发写入时的竞态条件
+				resultMapMutex.Lock()
 				if revCheckResult.Success == false {
 					if _, ok := outputInfo.FailedMapString[revCheckResult.Host]; ok {
 						outputInfo.FailedMapString[revCheckResult.Host] = append(outputInfo.FailedMapString[revCheckResult.Host], revCheckResult.Port)
@@ -153,7 +158,7 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 						outputInfo.SuccessMapString[revCheckResult.Host] = []string{revCheckResult.Port}
 					}
 				}
-				wg.Done()
+				resultMapMutex.Unlock()
 			case <-exitRevResultChan:
 				return
 			}
@@ -182,7 +187,7 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 					})
 					if err != nil {
 						wg.Done()
-						return err
+						return fmt.Errorf("scan - Invoke Error: %v", err)
 					}
 				}
 				return nil
@@ -249,7 +254,7 @@ func (s ScanTools) parseHost(inputHostString string) ([]IPRangeInfo, error) {
 		} else if strings.Contains(oneHostString, "-") {
 			// 简易的 192.168.1.1-254
 
-			ipSplit := strings.Split(inputHostString, "-")
+			ipSplit := strings.Split(oneHostString, "-")
 			if len(ipSplit) > 2 {
 				return nil, fmt.Errorf("scan - InputInfo Host Split Error: %s", inputHostString)
 			} else if len(ipSplit) == 2 {
@@ -272,8 +277,27 @@ func (s ScanTools) parseHost(inputHostString string) ([]IPRangeInfo, error) {
 				if err != nil {
 					return nil, fmt.Errorf("scan - InputInfo Host Atoi Error: %v", ipSplit[1])
 				}
+
+				// 添加输入验证：边界检查
+				if startIndex < 0 || startIndex > 255 {
+					return nil, fmt.Errorf("scan - InputInfo Host start index out of range [0-255]: %d", startIndex)
+				}
+				if endIndex < 0 || endIndex > 255 {
+					return nil, fmt.Errorf("scan - InputInfo Host end index out of range [0-255]: %d", endIndex)
+				}
+				if startIndex > endIndex {
+					return nil, fmt.Errorf("scan - InputInfo Host start index (%d) cannot be greater than end index (%d)", startIndex, endIndex)
+				}
+
+				// 防止大范围导致的资源耗尽
+				maxRangeSize := 1000
+				rangeSize := endIndex - startIndex + 1
+				if rangeSize > maxRangeSize {
+					return nil, fmt.Errorf("scan - InputInfo Host range size (%d) exceeds maximum allowed (%d)", rangeSize, maxRangeSize)
+				}
+
 				ipRangeInfo.Begin = address
-				ipRangeInfo.CountNextTime = endIndex - startIndex + 1
+				ipRangeInfo.CountNextTime = rangeSize
 			}
 			parsedHostList = append(parsedHostList, ipRangeInfo)
 
@@ -404,7 +428,7 @@ func (p ProtocolType) String() string {
 	}
 }
 
-func String2ProcotolType(input string) ProtocolType {
+func String2ProtocolType(input string) ProtocolType {
 	switch input {
 	case "rdp":
 		return RDP

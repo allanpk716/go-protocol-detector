@@ -1,3 +1,4 @@
 /.idea
 /cmd/go-protocol-detector/*.exe
 /dist
+/go-protocol-detector

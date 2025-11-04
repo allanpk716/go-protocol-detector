@@ -82,7 +82,7 @@ func main() {
 		},
 		Action: func(c *cli.Context) error {
 
-			nowProtocol := pkg.String2ProcotolType(protocol)
+			nowProtocol := pkg.String2ProtocolType(protocol)
 
 			outputInfo, err := pkg.NewScanTools(thread, time.Duration(timeOut)*time.Millisecond).Scan(nowProtocol, pkg.InputInfo{
 				Host:               host,
