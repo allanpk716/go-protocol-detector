@@ -1,11 +1,14 @@
 package sftp
 
 import (
+	"fmt"
+	"net"
 	"github.com/allanpk716/go-protocol-detector/internal/custom_error"
+	"github.com/allanpk716/go-protocol-detector/internal/utils"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
-	"io/ioutil"
-	"net"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -30,21 +33,27 @@ func (s SFTPHelper) Check(user, password, priKeyFullPath string) error {
 	if priKeyFullPath == "" {
 		authMethod = ssh.Password(password)
 	} else {
-		// use private key login, password belong to private key
-		keyData, err := ioutil.ReadFile(priKeyFullPath)
-		if err != nil {
-			return err
+		// 验证私钥文件路径是否安全
+		if err := utils.ValidatePrivateKeyPath(priKeyFullPath); err != nil {
+			return fmt.Errorf("invalid private key path: %w", err)
 		}
+
+		// use private key login, password belong to private key
+		keyData, err := os.ReadFile(priKeyFullPath)
+		if err != nil {
+			return fmt.Errorf("failed to read private key file %s: %w", filepath.Base(priKeyFullPath), err)
+		}
+
 		var signer ssh.Signer
 		if password != "" {
 			signer, err = ssh.ParsePrivateKeyWithPassphrase(keyData, []byte(password))
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to parse private key with passphrase: %w", err)
 			}
 		} else {
 			signer, err = ssh.ParsePrivateKey(keyData)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to parse private key: %w", err)
 			}
 		}
 		authMethod = ssh.PublicKeys(signer)
