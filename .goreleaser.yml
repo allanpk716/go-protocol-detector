@@ -56,11 +56,6 @@ builds:
 archives:
   - id: archive
     name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      amd64: x86_64
 checksum:
   name_template: "checksums.txt"
 snapshot:
