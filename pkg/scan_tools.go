@@ -590,18 +590,29 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 			case revCheckResult := <-checkResultChan:
 				// 使用写锁保护map操作，防止并发写入时的竞态条件
 				resultMapMutex.Lock()
+
+				// Parse port as int for ScanContext
+				portInt := 0
+				if p, err := strconv.Atoi(revCheckResult.Port); err == nil {
+					portInt = p
+				}
+
 				if revCheckResult.Success == false {
 					if _, ok := outputInfo.FailedMapString[revCheckResult.Host]; ok {
 						outputInfo.FailedMapString[revCheckResult.Host] = append(outputInfo.FailedMapString[revCheckResult.Host], revCheckResult.Port)
 					} else {
 						outputInfo.FailedMapString[revCheckResult.Host] = []string{revCheckResult.Port}
 					}
+					// Update ScanContext with failed result
+					scanContext.MarkFailed(revCheckResult.Host, portInt)
 				} else {
 					if _, ok := outputInfo.SuccessMapString[revCheckResult.Host]; ok {
 						outputInfo.SuccessMapString[revCheckResult.Host] = append(outputInfo.SuccessMapString[revCheckResult.Host], revCheckResult.Port)
 					} else {
 						outputInfo.SuccessMapString[revCheckResult.Host] = []string{revCheckResult.Port}
 					}
+					// Update ScanContext with successful result
+					scanContext.MarkCompleted(revCheckResult.Host, portInt, revCheckResult.ResponseTime)
 				}
 				resultMapMutex.Unlock()
 			case <-exitRevResultChan:
@@ -710,8 +721,14 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 		scanContext.ScanID, finalStats.ProgressPercent, finalStats.ScannedTargets, finalStats.TotalTargets,
 		finalStats.SuccessCount, finalStats.FailureCount, finalStats.ScanDuration)
 
-	// TODO: Implement CSV output functionality
-	log.Printf("CSV output functionality not yet implemented")
+	// Implement CSV output functionality
+	if csvOutputPath != "" {
+		if err := s.writeResultsToCSV(&outputInfo, scanContext.ScanID, csvOutputPath); err != nil {
+			log.Printf("Warning: Failed to write CSV results: %v", err)
+		} else {
+			log.Printf("CSV results written to: %s", csvOutputPath)
+		}
+	}
 
 	// Remove from incomplete scans index if scan completed successfully
 	if resumeManager != nil && scanContext.IsComplete() {
@@ -1036,4 +1053,69 @@ func String2ProtocolType(input string) ProtocolType {
 	default:
 		return Common
 	}
+}
+
+// writeResultsToCSV writes scan results to a CSV file
+func (s ScanTools) writeResultsToCSV(outputInfo *OutputInfo, scanID string, csvPath string) error {
+	// Create CSV writer
+	csvWriter, err := NewCSVWriter(csvPath)
+	if err != nil {
+		return fmt.Errorf("failed to create CSV writer: %w", err)
+	}
+	defer csvWriter.Close()
+
+	// Write successful results
+	for host, ports := range outputInfo.SuccessMapString {
+		for _, portStr := range ports {
+			port, err := strconv.Atoi(portStr)
+			if err != nil {
+				continue // Skip invalid port numbers
+			}
+
+			csvResult := CSVResult{
+				Timestamp:    time.Now(),
+				ScanID:       scanID,
+				Protocol:     outputInfo.ProtocolType.String(),
+				Host:         host,
+				Port:         port,
+				Status:       "success",
+				ResponseTime: "", // We don't have response time in OutputInfo
+				ErrorMessage: "",
+			}
+			if err := csvWriter.WriteResult(csvResult); err != nil {
+				return fmt.Errorf("failed to write successful result: %w", err)
+			}
+		}
+	}
+
+	// Write failed results
+	for host, ports := range outputInfo.FailedMapString {
+		for _, portStr := range ports {
+			port, err := strconv.Atoi(portStr)
+			if err != nil {
+				continue // Skip invalid port numbers
+			}
+
+			csvResult := CSVResult{
+				Timestamp:    time.Now(),
+				ScanID:       scanID,
+				Protocol:     outputInfo.ProtocolType.String(),
+				Host:         host,
+				Port:         port,
+				Status:       "failed",
+				ResponseTime: "",
+				ErrorMessage: "", // We don't have error messages in OutputInfo
+			}
+			if err := csvWriter.WriteResult(csvResult); err != nil {
+				return fmt.Errorf("failed to write failed result: %w", err)
+			}
+		}
+	}
+
+	// Flush all data to disk
+	if err := csvWriter.Flush(); err != nil {
+		return fmt.Errorf("failed to flush CSV data: %w", err)
+	}
+
+	return nil
 }

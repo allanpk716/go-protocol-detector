@@ -20,6 +20,7 @@ var (
 	user           string
 	password       string
 	priKeyFullPath string
+	csvOutput      string
 )
 
 var AppVersion = "unknow"
@@ -79,27 +80,51 @@ func main() {
 				Value:       "~/.ssh/id_rsa",
 				Destination: &priKeyFullPath,
 			},
+			&cli.StringFlag{
+				Name:        "csv-output",
+				Usage:       "output scan results to CSV file (default: scan_results_YYYYMMDD_HHMMSS.csv)",
+				Value:       "",
+				Destination: &csvOutput,
+			},
 		},
 		Action: func(c *cli.Context) error {
 
 			nowProtocol := pkg.String2ProtocolType(protocol)
+			scanTools := pkg.NewScanTools(thread, time.Duration(timeOut)*time.Millisecond)
 
-			outputInfo, err := pkg.NewScanTools(thread, time.Duration(timeOut)*time.Millisecond).Scan(nowProtocol, pkg.InputInfo{
+			// Set default CSV output file if not specified
+			if csvOutput == "" {
+				csvOutput = fmt.Sprintf("scan_results_%s.csv", time.Now().Format("20060102_150405"))
+			}
+
+			var outputInfo *pkg.OutputInfo
+			var err error
+
+			// Always use ScanWithOutput for CSV output
+			outputInfo, _, err = scanTools.ScanWithOutput(nowProtocol, pkg.InputInfo{
 				Host:               host,
 				Port:               port,
 				User:               user,
 				Password:           password,
 				PrivateKeyFullPath: priKeyFullPath,
-			}, true)
+			}, true, csvOutput)
+
 			if err != nil {
 				return err
 			}
 
 			log.Println("==========================================================")
 			info := protocol + " Scan Result: \r\n"
-			for s2, i := range outputInfo.SuccessMapString {
-				info += s2 + ":" + strings.Join(i, ",") + "\r\n"
+
+			// Show console output
+			if outputInfo != nil {
+				for s2, i := range outputInfo.SuccessMapString {
+					info += s2 + ":" + strings.Join(i, ",") + "\r\n"
+				}
 			}
+
+			info += fmt.Sprintf("CSV results saved to: %s\r\n", csvOutput)
+
 			fmt.Print(info)
 			log.Println("==========================================================")
 			return nil
