@@ -40,13 +40,11 @@ func main() {
 			},
 			&cli.StringFlag{
 				Name:        "host",
-				Value:       "192.168.1.1",
 				Usage:       "support 3 diffs types: 192.168.1.1,192.168.1.100-254,192.168.1.0/24",
 				Destination: &host,
 			},
 			&cli.StringFlag{
 				Name:        "port",
-				Value:       "22",
 				Usage:       "support like: 22,80,443,3380-3390",
 				Destination: &port,
 			},
@@ -88,6 +86,11 @@ func main() {
 			},
 		},
 		Action: func(c *cli.Context) error {
+			// 检查是否没有任何参数被传递，如果没有则显示帮助信息
+			if c.NumFlags() == 0 {
+				cli.ShowAppHelp(c)
+				return nil
+			}
 
 			nowProtocol := pkg.String2ProtocolType(protocol)
 			scanTools := pkg.NewScanTools(thread, time.Duration(timeOut)*time.Millisecond)
