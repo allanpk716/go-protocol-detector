@@ -919,9 +919,9 @@ func (s ScanTools) parsePort(inputPortString string) ([]int, error) {
 			totalPortCount += rangePortCount
 
 			// 防止创建过大的端口列表（资源保护）
-			if totalPortCount > 10000 {
+			if totalPortCount > 65536 {
 				return nil, errors.NewResourceLimitError(
-					fmt.Sprintf("too many ports specified (max 10000 allowed, got %d)", totalPortCount),
+					fmt.Sprintf("too many ports specified (max 65536 allowed, got %d)", totalPortCount),
 					nil,
 				)
 			}
@@ -945,9 +945,9 @@ func (s ScanTools) parsePort(inputPortString string) ([]int, error) {
 			}
 
 			totalPortCount++
-			if totalPortCount > 10000 {
+			if totalPortCount > 65536 {
 				return nil, errors.NewResourceLimitError(
-					fmt.Sprintf("too many ports specified (max 10000 allowed, got %d)", totalPortCount),
+					fmt.Sprintf("too many ports specified (max 65536 allowed, got %d)", totalPortCount),
 					nil,
 				)
 			}
