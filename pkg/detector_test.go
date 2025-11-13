@@ -130,30 +130,48 @@ func TestDetector_FTPCheck(t *testing.T) {
 func TestDetector_SFTPCheck(t *testing.T) {
 	det := NewDetector(timeOut)
 
-	// 测试SFTP密码登录（需要设置相关环境变量）
+	// 测试SFTP协议检测（无需认证信息）
 	testHost := getTestEnv("TEST_SFTP_HOST")
 	testPort := getTestEnv("TEST_SFTP_PORT")
-	testUser := getTestEnv("TEST_SFTP_USER")
-	testPass := getTestEnv("TEST_SFTP_PASSWORD")
 
-	if testHost != "" && testPort != "" && testUser != "" && testPass != "" {
-		err := det.SFTPCheck(testHost, testPort, testUser, testPass, "")
+	if testHost != "" && testPort != "" {
+		// 测试无认证的协议检测（主要功能）
+		err := det.SFTPCheck(testHost, testPort, "", "", "")
 		if err != nil {
-			t.Logf("SFTP password check failed for %s:%s - %v", testHost, testPort, err)
+			t.Logf("SFTP protocol detection failed for %s:%s - %v", testHost, testPort, err)
+		} else {
+			t.Logf("SFTP protocol detection successful for %s:%s", testHost, testPort)
 		}
 
-		// 测试私钥登录（需要额外的环境变量）
-		testKeyFile := getTestEnv("TEST_SFTP_KEYFILE")
-		testKeyPass := getTestEnv("TEST_SFTP_KEY_PASSWORD")
+		// 测试带认证的检测（备用功能，仅在用户明确提供认证信息时使用）
+		testUser := getTestEnv("TEST_SFTP_USER")
+		testPass := getTestEnv("TEST_SFTP_PASSWORD")
 
-		if testKeyFile != "" {
-			err = det.SFTPCheck(testHost, testPort, testUser, testKeyPass, testKeyFile)
+		if testUser != "" && testPass != "" {
+			err = det.SFTPCheck(testHost, testPort, testUser, testPass, "")
 			if err != nil {
-				t.Logf("SFTP key check failed for %s:%s - %v", testHost, testPort, err)
+				t.Logf("SFTP authenticated detection failed for %s:%s - %v", testHost, testPort, err)
+			} else {
+				t.Logf("SFTP authenticated detection successful for %s:%s", testHost, testPort)
 			}
+
+			// 测试私钥登录（需要额外的环境变量）
+			testKeyFile := getTestEnv("TEST_SFTP_KEYFILE")
+			testKeyPass := getTestEnv("TEST_SFTP_KEY_PASSWORD")
+
+			if testKeyFile != "" {
+				err = det.SFTPCheck(testHost, testPort, testUser, testKeyPass, testKeyFile)
+				if err != nil {
+					t.Logf("SFTP key-based detection failed for %s:%s - %v", testHost, testPort, err)
+				} else {
+					t.Logf("SFTP key-based detection successful for %s:%s", testHost, testPort)
+				}
+			}
+		} else {
+			t.Logf("Skipping authenticated SFTP tests: TEST_SFTP_USER and TEST_SFTP_PASSWORD not set")
 		}
 	} else {
-		t.Skip("Skipping SFTP tests: environment variables TEST_SFTP_HOST, TEST_SFTP_PORT, TEST_SFTP_USER, TEST_SFTP_PASSWORD are not set")
+		t.Skip("Skipping SFTP tests: environment variables TEST_SFTP_HOST and TEST_SFTP_PORT are not set")
 	}
 }
 

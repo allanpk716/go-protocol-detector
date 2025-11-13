@@ -13,11 +13,11 @@
 
 * SFTP
 
-  > 这个检测很傻，因为优先做的是 SSH 的验证，才走的 FTP 的命令。然而在应用层又拿不到封包的特征，所以没啥用。
+  > SFTP（SSH 文件传输协议）运行在 SSH 协议之上，需要完整的 SSH 协议栈支持进行检测。
   >
-  > 但是对于特殊应用场景也是能用的（逃
+  > 当前实现采用多层检测策略：无认证快速检测 → 常见凭据测试 → 高级检测模式。
   >
-  > 如果要做到合理的检测，就需要从这个 [gopacket](https://github.com/google/gopacket) 入手，有空再试试。doge
+  > 由于 SSH 协议的加密特性，基于连接的检测是验证 SFTP 服务可用性的最可靠方法，数据包级别的检测因加密而不可行。
 
 * SSH
 
@@ -31,7 +31,7 @@
 
 ## TODO
 
-- [ ] SFTP detected by [gopacket](https://github.com/google/gopacket)
+- [ ] 优化 SFTP 检测性能和凭据测试策略
 
 ## 如何实现的
 

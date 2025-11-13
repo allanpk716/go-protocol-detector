@@ -16,9 +16,11 @@ May be refactored in future use.
 
 * SFTP
 
-  > Something you should know, first, SSH validation is required, then check SFTP Client protocol.
+  > SFTP (SSH File Transfer Protocol) detection using protocol analysis.
   >
-  > I think it need implemented by [gopacket](https://github.com/google/gopacket)
+  > Detects SSH service and SFTP subsystem availability without authentication.
+  >
+  > Fast 3-layer detection: TCP connection → SSH protocol identification → SFTP subsystem query.
 
 * SSH
 
@@ -73,14 +75,16 @@ go-protocol-detector --protocol=rdp --host=172.20.65.89-101 --port=3389
 
 go-protocol-detector --protocol=rdp --host=172.20.65.89-101 --port=3389,1024-2000
 
-go-protocol-detector --protocol=sftp --host=172.20.65.89-101 --port=3389 --user=root --password=123
+# Fast SFTP detection (recommended, no authentication required)
+go-protocol-detector --protocol=sftp --host=172.20.65.1/24 --port=22
 
-go-protocol-detector --protocol=sftp --host=172.20.65.1/24 --port=3389 --password=123 --prikey=/keys/privatekey
+# SFTP detection with authentication (when required)
+go-protocol-detector --protocol=sftp --host=172.20.65.1/24 --port=22 --user=root --password=123
 ```
 
 ## TODO
 
-- [ ] SFTP detected by [gopacket](https://github.com/google/gopacket)
+- [ ] Optimize SFTP detection performance and credential testing strategy
 
 ## Give a reward
 
