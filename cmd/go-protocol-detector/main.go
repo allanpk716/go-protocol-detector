@@ -21,6 +21,7 @@ var (
 	password       string
 	priKeyFullPath string
 	csvOutput      string
+	noCSV          bool
 )
 
 var AppVersion = "unknow"
@@ -84,6 +85,12 @@ func main() {
 				Value:       "",
 				Destination: &csvOutput,
 			},
+			&cli.BoolFlag{
+				Name:        "no-csv",
+				Usage:       "disable CSV output, only show results in console",
+				Value:       false,
+				Destination: &noCSV,
+			},
 		},
 		Action: func(c *cli.Context) error {
 			// 检查是否没有任何参数被传递，如果没有则显示帮助信息
@@ -95,22 +102,33 @@ func main() {
 			nowProtocol := pkg.String2ProtocolType(protocol)
 			scanTools := pkg.NewScanTools(thread, time.Duration(timeOut)*time.Millisecond)
 
-			// Set default CSV output file if not specified
-			if csvOutput == "" {
-				csvOutput = fmt.Sprintf("scan_results_%s.csv", time.Now().Format("20060102_150405"))
-			}
-
 			var outputInfo *pkg.OutputInfo
 			var err error
 
-			// Always use ScanWithOutput for CSV output
-			outputInfo, _, err = scanTools.ScanWithOutput(nowProtocol, pkg.InputInfo{
-				Host:               host,
-				Port:               port,
-				User:               user,
-				Password:           password,
-				PrivateKeyFullPath: priKeyFullPath,
-			}, true, csvOutput)
+			if noCSV {
+				// Don't save to CSV, just scan and show console output
+				outputInfo, err = scanTools.Scan(nowProtocol, pkg.InputInfo{
+					Host:               host,
+					Port:               port,
+					User:               user,
+					Password:           password,
+					PrivateKeyFullPath: priKeyFullPath,
+				}, true)
+			} else {
+				// Set default CSV output file if not specified
+				if csvOutput == "" {
+					csvOutput = fmt.Sprintf("scan_results_%s.csv", time.Now().Format("20060102_150405"))
+				}
+
+				// Use ScanWithOutput for CSV output
+				outputInfo, _, err = scanTools.ScanWithOutput(nowProtocol, pkg.InputInfo{
+					Host:               host,
+					Port:               port,
+					User:               user,
+					Password:           password,
+					PrivateKeyFullPath: priKeyFullPath,
+				}, true, csvOutput)
+			}
 
 			if err != nil {
 				return err
@@ -126,7 +144,9 @@ func main() {
 				}
 			}
 
-			info += fmt.Sprintf("CSV results saved to: %s\r\n", csvOutput)
+			if !noCSV {
+				info += fmt.Sprintf("CSV results saved to: %s\r\n", csvOutput)
+			}
 
 			fmt.Print(info)
 			log.Println("==========================================================")
