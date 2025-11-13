@@ -4,3 +4,4 @@
 /go-protocol-detector
 *.exe
 *.csv
+/.spec-workflow

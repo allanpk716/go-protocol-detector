@@ -45,7 +45,13 @@ func (d Detector) FTPCheck(host, port string) error {
 }
 
 func (d Detector) SFTPCheck(host, port, user, password, privateKeyFullPath string) error {
-	return sftp.NewSFTPHelper(host, port, d.timeOut).Check(user, password, privateKeyFullPath)
+	// 新的SFTP检测逻辑：无需认证凭据，直接进行SFTP子系统探测
+	return sftp.NewSFTPHelper(host, port, d.timeOut).Check("", "", "")
+}
+
+// 保留原有的认证式SFTP检测方法（向后兼容）
+func (d Detector) SFTPCheckWithAuth(host, port, user, password, privateKeyFullPath string) error {
+	return sftp.NewSFTPHelper(host, port, d.timeOut).CheckWithAuth(user, password, privateKeyFullPath)
 }
 
 func (d Detector) TelnetCheck(host, port string) error {

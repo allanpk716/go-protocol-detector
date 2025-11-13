@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "mcp__web-search-prime__webSearchPrime",
-      "WebFetch(domain:goreleaser.com)"
+      "WebFetch(domain:goreleaser.com)",
+      "mcp__exa__get_code_context_exa",
+      "mcp__exa__web_search_exa"
     ],
     "deny": [],
     "ask": []
