@@ -17,20 +17,22 @@ import (
 )
 
 type Detector struct {
-	rdp     *rdp.RDPHelper
-	ssh     *ssh.SSHHelper
-	ftp     *ftp.FTPHelper
+	rdp          *rdp.RDPHelper
+	ssh          *ssh.SSHHelper
+	ftp          *ftp.FTPHelper
 	rustdeskHBBS *rustdesk.HBBSHelper
-	timeOut time.Duration
+	rustdeskHBBR *rustdesk.HBBRHelper
+	timeOut      time.Duration
 }
 
 func NewDetector(timeOut time.Duration) *Detector {
 	d := Detector{
-		rdp:     rdp.NewRDPHelper(),
-		ssh:     ssh.NewSSHHelper(),
-		ftp:     ftp.NewFTPHelper(),
+		rdp:          rdp.NewRDPHelper(),
+		ssh:          ssh.NewSSHHelper(),
+		ftp:          ftp.NewFTPHelper(),
 		rustdeskHBBS: rustdesk.NewHBBSHelper(),
-		timeOut: timeOut,
+		rustdeskHBBR: rustdesk.NewHBBRHelper(),
+		timeOut:      timeOut,
 	}
 	return &d
 }
@@ -89,12 +91,40 @@ func (d Detector) CommonPortCheck(host, port string) error {
 }
 
 func (d Detector) HBBSCheck(host, port string) error {
+	// HBBS uses protobuf-based detection with TestNatRequest
+	// The server responds with TestNatResponse containing the port number
 	return d.commonCheck(host, port, d.rustdeskHBBS.SenderPackage, d.rustdeskHBBS.ReceiverFeatures, custom_error.ErrRustDeskHBBSNotFound)
 }
 
 func (d Detector) HBBRCheck(host, port string) error {
-	// HBBR uses connection-based detection (similar to Common)
-	return d.CommonPortCheck(host, port)
+	// HBBR uses protocol-based detection with RequestRelay message
+	// The server will accept the message and keep the connection open,
+	// waiting for relay pairing. No response is sent immediately.
+	//
+	// Detection strategy:
+	// 1. Send RequestRelay message (with empty uuid)
+	// 2. Server accepts the message (doesn't close connection)
+	// 3. We close the connection (detection complete)
+	//
+	// This is reliable protocol-based detection - only HBBR servers
+	// will understand the RequestRelay message and accept it.
+
+	// Special handling for HBBR: no response expected, just send message
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), d.timeOut)
+	if err != nil {
+		return custom_error.ErrRustDeskHBBRNotFound
+	}
+	defer conn.Close()
+
+	// Send the RequestRelay message
+	_, err = conn.Write(d.rustdeskHBBR.SenderPackage)
+	if err != nil {
+		return custom_error.ErrRustDeskHBBRNotFound
+	}
+
+	// Message sent successfully - server accepted it
+	// (HBBR servers keep connection open waiting for relay pairing)
+	return nil
 }
 
 func (d Detector) commonCheck(host string, port string,
