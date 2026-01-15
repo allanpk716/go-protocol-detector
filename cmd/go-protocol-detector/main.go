@@ -35,7 +35,7 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "protocol",
-				Usage:       "select only one protocol: rdp | ssh | ftp | sftp | telnet | vnc | common",
+				Usage:       "select only one protocol: common | ftp | rdp | rustdesk-hbbs | rustdesk-hbbr | sftp | ssh | telnet | vnc",
 				Value:       "common",
 				Destination: &protocol,
 			},
