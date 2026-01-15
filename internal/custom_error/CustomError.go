@@ -11,6 +11,7 @@ var (
 	ErrSFTPNotFound        = errors.New("sftp not found")
 	ErrRustDeskHBBSNotFound = errors.New("rustdesk hbbs not found")
 	ErrRustDeskHBBRNotFound = errors.New("rustdesk hbbr not found")
+	ErrRustDeskHBBS21116NotFound = errors.New("rustdesk hbbs 21116 not found")
 
 	ErrCommontPortCheckError = errors.New("commont port check error")
 

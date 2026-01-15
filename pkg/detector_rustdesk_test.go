@@ -22,3 +22,12 @@ func TestDetector_HBBRCheck(t *testing.T) {
 		t.Logf("HBBR check failed (server may be unavailable): %v", err)
 	}
 }
+
+func TestDetector_HBBS21116Check(t *testing.T) {
+	d := NewDetector(3 * time.Second)
+	// Test against known RustDesk server
+	err := d.HBBS21116Check("116.62.8.4", "21116")
+	if err != nil {
+		t.Logf("HBBS21116 check failed (server may be unavailable): %v", err)
+	}
+}

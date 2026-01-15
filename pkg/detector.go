@@ -17,22 +17,24 @@ import (
 )
 
 type Detector struct {
-	rdp          *rdp.RDPHelper
-	ssh          *ssh.SSHHelper
-	ftp          *ftp.FTPHelper
-	rustdeskHBBS *rustdesk.HBBSHelper
-	rustdeskHBBR *rustdesk.HBBRHelper
-	timeOut      time.Duration
+	rdp               *rdp.RDPHelper
+	ssh               *ssh.SSHHelper
+	ftp               *ftp.FTPHelper
+	rustdeskHBBS      *rustdesk.HBBSHelper
+	rustdeskHBBR      *rustdesk.HBBRHelper
+	rustdeskHBBS21116 *rustdesk.HBBS21116Helper
+	timeOut           time.Duration
 }
 
 func NewDetector(timeOut time.Duration) *Detector {
 	d := Detector{
-		rdp:          rdp.NewRDPHelper(),
-		ssh:          ssh.NewSSHHelper(),
-		ftp:          ftp.NewFTPHelper(),
-		rustdeskHBBS: rustdesk.NewHBBSHelper(),
-		rustdeskHBBR: rustdesk.NewHBBRHelper(),
-		timeOut:      timeOut,
+		rdp:               rdp.NewRDPHelper(),
+		ssh:               ssh.NewSSHHelper(),
+		ftp:               ftp.NewFTPHelper(),
+		rustdeskHBBS:      rustdesk.NewHBBSHelper(),
+		rustdeskHBBR:      rustdesk.NewHBBRHelper(),
+		rustdeskHBBS21116: rustdesk.NewHBBS21116Helper(),
+		timeOut:           timeOut,
 	}
 	return &d
 }
@@ -125,6 +127,26 @@ func (d Detector) HBBRCheck(host, port string) error {
 	// Message sent successfully - server accepted it
 	// (HBBR servers keep connection open waiting for relay pairing)
 	return nil
+}
+
+func (d Detector) HBBS21116Check(host, port string) error {
+	// HBBS 21116 detection using RegisterPk message
+	//
+	// Port 21116 serves multiple functions:
+	// - UDP: ID registration and heartbeat services
+	// - TCP: TCP hole punching and connection services
+	//
+	// Detection strategy:
+	// 1. Send RegisterPk message with no_register_device=true
+	// 2. Server responds with RegisterPkResponse
+	// 3. Verify response contains RegisterPkResponse field (field 16)
+	//
+	// This works reliably because:
+	// - no_register_device=true doesn't require valid keys
+	// - Server always responds to RegisterPk messages
+	// - Protocol-specific detection eliminates false positives
+	return d.commonCheck(host, port, d.rustdeskHBBS21116.SenderPackage,
+		d.rustdeskHBBS21116.ReceiverFeatures, custom_error.ErrRustDeskHBBS21116NotFound)
 }
 
 func (d Detector) commonCheck(host string, port string,

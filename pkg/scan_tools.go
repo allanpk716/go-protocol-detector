@@ -198,6 +198,12 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 			} else {
 				checkResult.ErrorMessage = err.Error()
 			}
+		case RustDeskHBBS21116:
+			if err := deliveryInfo.Detector.HBBS21116Check(deliveryInfo.Host, deliveryInfo.Port); err == nil {
+				checkResult.Success = true
+			} else {
+				checkResult.ErrorMessage = err.Error()
+			}
 		default:
 			// 默认就当常规的端口来检测
 			if err := deliveryInfo.Detector.CommonPortCheck(deliveryInfo.Host, deliveryInfo.Port); err == nil {
@@ -523,6 +529,12 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 			}
 		case RustDeskHBBR:
 			if err := deliveryInfo.Detector.HBBRCheck(deliveryInfo.Host, deliveryInfo.Port); err == nil {
+				checkResult.Success = true
+			} else {
+				checkResult.ErrorMessage = err.Error()
+			}
+		case RustDeskHBBS21116:
+			if err := deliveryInfo.Detector.HBBS21116Check(deliveryInfo.Host, deliveryInfo.Port); err == nil {
 				checkResult.Success = true
 			} else {
 				checkResult.ErrorMessage = err.Error()
@@ -1037,6 +1049,7 @@ const (
 	Common
 	RustDeskHBBS
 	RustDeskHBBR
+	RustDeskHBBS21116
 )
 
 func (p ProtocolType) String() string {
@@ -1059,6 +1072,8 @@ func (p ProtocolType) String() string {
 		return "rustdesk-hbbs"
 	case RustDeskHBBR:
 		return "rustdesk-hbbr"
+	case RustDeskHBBS21116:
+		return "rustdesk-hbbs-21116"
 	default:
 		return "unknown"
 	}
@@ -1084,6 +1099,8 @@ func String2ProtocolType(input string) ProtocolType {
 		return RustDeskHBBS
 	case "rustdesk-hbbr":
 		return RustDeskHBBR
+	case "rustdesk-hbbs-21116":
+		return RustDeskHBBS21116
 	default:
 		return Common
 	}
