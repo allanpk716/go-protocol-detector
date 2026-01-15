@@ -186,6 +186,18 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 			} else {
 				checkResult.ErrorMessage = err.Error()
 			}
+		case RustDeskHBBS:
+			if err := deliveryInfo.Detector.HBBSCheck(deliveryInfo.Host, deliveryInfo.Port); err == nil {
+				checkResult.Success = true
+			} else {
+				checkResult.ErrorMessage = err.Error()
+			}
+		case RustDeskHBBR:
+			if err := deliveryInfo.Detector.HBBRCheck(deliveryInfo.Host, deliveryInfo.Port); err == nil {
+				checkResult.Success = true
+			} else {
+				checkResult.ErrorMessage = err.Error()
+			}
 		default:
 			// 默认就当常规的端口来检测
 			if err := deliveryInfo.Detector.CommonPortCheck(deliveryInfo.Host, deliveryInfo.Port); err == nil {
@@ -499,6 +511,18 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 			}
 		case VNC:
 			if err := deliveryInfo.Detector.VNCCheck(deliveryInfo.Host, deliveryInfo.Port); err == nil {
+				checkResult.Success = true
+			} else {
+				checkResult.ErrorMessage = err.Error()
+			}
+		case RustDeskHBBS:
+			if err := deliveryInfo.Detector.HBBSCheck(deliveryInfo.Host, deliveryInfo.Port); err == nil {
+				checkResult.Success = true
+			} else {
+				checkResult.ErrorMessage = err.Error()
+			}
+		case RustDeskHBBR:
+			if err := deliveryInfo.Detector.HBBRCheck(deliveryInfo.Host, deliveryInfo.Port); err == nil {
 				checkResult.Success = true
 			} else {
 				checkResult.ErrorMessage = err.Error()
