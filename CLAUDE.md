@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development Environment and Guidelines
+
+### Communication Language
+- **Use Chinese (中文) for all responses and explanations** to the user
+- Code comments and documentation may remain in English for consistency with the codebase
+
+### Development Platform
+- **Primary development OS: Windows**
+- Build and test commands should account for Windows environment (e.g., use `./go-protocol-detector.exe` not `./go-protocol-detector`)
+- Shell commands may use Git Bash or Windows CMD syntax as appropriate
+
+### Script Development Rules
+- **BAT scripts MUST NOT contain Chinese characters** - use only ASCII/English to ensure proper execution on Windows
+- **Script modification**: When asked to fix a script, edit the existing script file directly. Only create a new script if explicitly necessary or requested.
+
 ## Project Overview
 
 This is a Go-based network protocol detector that identifies active services for multiple protocols (RDP, SSH, FTP, SFTP, Telnet, VNC) across IP ranges and port ranges. The tool uses packet-based detection for most protocols and connection-based detection for others.
