@@ -1011,6 +1011,8 @@ const (
 	Telnet
 	VNC
 	Common
+	RustDeskHBBS
+	RustDeskHBBR
 )
 
 func (p ProtocolType) String() string {
@@ -1029,6 +1031,10 @@ func (p ProtocolType) String() string {
 		return "vnc"
 	case Common:
 		return "common"
+	case RustDeskHBBS:
+		return "rustdesk-hbbs"
+	case RustDeskHBBR:
+		return "rustdesk-hbbr"
 	default:
 		return "unknown"
 	}
@@ -1050,6 +1056,10 @@ func String2ProtocolType(input string) ProtocolType {
 		return VNC
 	case "common":
 		return Common
+	case "rustdesk-hbbs":
+		return RustDeskHBBS
+	case "rustdesk-hbbr":
+		return RustDeskHBBR
 	default:
 		return Common
 	}
