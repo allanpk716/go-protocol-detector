@@ -1,3 +1,11 @@
+// Package rustdesk implements protocol detection helpers for RustDesk remote desktop software.
+//
+// This module provides detection for:
+//   - HBBS (HeartBeat/Broker Server): RustDesk's rendezvous/signaling server (ports 21115, 21116)
+//   - HBBR (HeartBeat/Broker Relay): RustDesk's relay server (port 21117)
+//
+// The HBBS protocol uses protobuf-encoded messages. This helper sends a TestNatRequest
+// message to detect active HBBS servers.
 package rustdesk
 
 import (
