@@ -12,11 +12,13 @@ type HBBSHelper struct {
 }
 
 func NewHBBSHelper() *HBBSHelper {
-	// Create a 10-byte message to match test expectation (0x0A)
-	innerMsg := []byte{0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	// Create a 4-byte message per spec
+	// innerMsg: 2 bytes - tag + value for serial=0
+	innerMsg := []byte{0x08, 0x00}
+	// outerMsg: 2 bytes - field 20 tag + length
 	outerMsg := []byte{0xA2, 0x02}
 	outerMsg = append(outerMsg, innerMsg...)
-	// outerMsg is now 10 bytes: 0xA2, 0x02 + 8 bytes
+	// outerMsg is now 4 bytes: 0xA2, 0x02 + 0x08, 0x00
 
 	result := make([]byte, 4+len(outerMsg))
 	binary.BigEndian.PutUint32(result[:4], uint32(len(outerMsg)))

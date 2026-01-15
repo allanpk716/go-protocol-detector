@@ -20,7 +20,7 @@ func TestHBBSHelperSenderPackage(t *testing.T) {
 	if len(pkg) == 0 {
 		t.Error("SenderPackage should not be empty")
 	}
-	expectedPrefix := []byte{0x00, 0x00, 0x00, 0x0A}
+	expectedPrefix := []byte{0x00, 0x00, 0x00, 0x04}
 	if len(pkg) < 4 {
 		t.Fatalf("Package too short: %d bytes", len(pkg))
 	}
