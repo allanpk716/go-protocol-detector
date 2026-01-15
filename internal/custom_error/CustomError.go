@@ -8,7 +8,9 @@ var (
 	ErrFTPNotFound    = errors.New("ftp not found")
 	ErrTelnetNotFound = errors.New("telnet not found")
 	ErrVNCNotFound    = errors.New("vnc not found")
-	ErrSFTPNotFound   = errors.New("sftp not found")
+	ErrSFTPNotFound        = errors.New("sftp not found")
+	ErrRustDeskHBBSNotFound = errors.New("rustdesk hbbs not found")
+	ErrRustDeskHBBRNotFound = errors.New("rustdesk hbbr not found")
 
 	ErrCommontPortCheckError = errors.New("commont port check error")
 
