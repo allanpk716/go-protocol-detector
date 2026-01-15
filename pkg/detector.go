@@ -11,6 +11,7 @@ import (
 	"github.com/allanpk716/go-protocol-detector/internal/feature/ssh"
 	"github.com/allanpk716/go-protocol-detector/internal/feature/telnet"
 	"github.com/allanpk716/go-protocol-detector/internal/feature/vnc"
+	"github.com/allanpk716/go-protocol-detector/internal/feature/rustdesk"
 	"net"
 	"time"
 )
@@ -19,6 +20,7 @@ type Detector struct {
 	rdp     *rdp.RDPHelper
 	ssh     *ssh.SSHHelper
 	ftp     *ftp.FTPHelper
+	rustdeskHBBS *rustdesk.HBBSHelper
 	timeOut time.Duration
 }
 
@@ -27,6 +29,7 @@ func NewDetector(timeOut time.Duration) *Detector {
 		rdp:     rdp.NewRDPHelper(),
 		ssh:     ssh.NewSSHHelper(),
 		ftp:     ftp.NewFTPHelper(),
+		rustdeskHBBS: rustdesk.NewHBBSHelper(),
 		timeOut: timeOut,
 	}
 	return &d
@@ -83,6 +86,15 @@ func (d Detector) CommonPortCheck(host, port string) error {
 	}
 	defer conn.Close()
 	return nil
+}
+
+func (d Detector) HBBSCheck(host, port string) error {
+	return d.commonCheck(host, port, d.rustdeskHBBS.SenderPackage, d.rustdeskHBBS.ReceiverFeatures, custom_error.ErrRustDeskHBBSNotFound)
+}
+
+func (d Detector) HBBRCheck(host, port string) error {
+	// HBBR uses connection-based detection (similar to Common)
+	return d.CommonPortCheck(host, port)
 }
 
 func (d Detector) commonCheck(host string, port string,
