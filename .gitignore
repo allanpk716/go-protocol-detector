@@ -5,3 +5,5 @@
 *.exe
 *.csv
 /.spec-workflow
+coverage.out
+.claude/
