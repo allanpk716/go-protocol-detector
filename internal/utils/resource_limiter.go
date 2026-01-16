@@ -159,14 +159,19 @@ func NewRateLimiter(requestsPerSecond int) *RateLimiter {
 		requestsPerSecond = 10 // 默认每秒10个请求
 	}
 
+	// 初始 token 数量为每秒请求数的 10 倍
+	// 这样可以在大范围扫描时提供足够的初始 token
+	const initialTokenMultiplier = 10
+	initialTokens := requestsPerSecond * initialTokenMultiplier
+
 	rl := &RateLimiter{
 		ticker:    time.NewTicker(time.Second / time.Duration(requestsPerSecond)),
-		tokens:    make(chan struct{}, requestsPerSecond),
-		maxTokens: requestsPerSecond,
+		tokens:    make(chan struct{}, initialTokens),
+		maxTokens: initialTokens,
 	}
 
 	// 初始填充tokens
-	for i := 0; i < requestsPerSecond; i++ {
+	for i := 0; i < initialTokens; i++ {
 		rl.tokens <- struct{}{}
 	}
 
