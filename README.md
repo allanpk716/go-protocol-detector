@@ -28,6 +28,15 @@ May be refactored in future use.
 
 * Telnet
 
+* RustDesk
+
+  > RustDesk remote desktop software detection.
+  >
+  > - **rustdesk-hbbs**: HBBS (Rendezvous/Signaling Server) detection on port 21116
+  > - **rustdesk-hbbr**: HBBR (Relay Server) detection on port 21117
+  >
+  > Uses protobuf-based detection for reliable RustDesk server identification.
+
 ## How to use
 
 ### Use From Code:
@@ -61,7 +70,7 @@ GLOBAL OPTIONS:
    --password value  if you scan sftp, need give a Password: root (default: "root")
    --port value      support like: 22,80,443,3380-3390 (default: "22")
    --prikey value    if you scan sftp, need give a pri key Full Path( user name or this priKeyFPath only chose one): ~/.ssh/id_rsa (default: "~/.ssh/id_rsa")
-   --protocol value  select only one protocol: rdp | ssh | ftp | sftp | telnet | vnc | common (default: "common")
+   --protocol value  select only one protocol: common | ftp | rdp | rustdesk-hbbs | rustdesk-hbbr | sftp | ssh | telnet | vnc (default: "common")
    --thread value    10 (default: 10)
    --timeout value   1000 ms (default: 1000)
    --user value      if you scan sftp, need give a UserName: root (default: "root")
@@ -80,6 +89,12 @@ go-protocol-detector --protocol=sftp --host=172.20.65.1/24 --port=22
 
 # SFTP detection with authentication (when required)
 go-protocol-detector --protocol=sftp --host=172.20.65.1/24 --port=22 --user=root --password=123
+
+# RustDesk HBBS detection (port 21116)
+go-protocol-detector --protocol=rustdesk-hbbs --host=192.168.1.1-254 --port=21116
+
+# RustDesk HBBR detection (port 21117)
+go-protocol-detector --protocol=rustdesk-hbbr --host=192.168.1.1-254 --port=21117
 ```
 
 ## TODO
