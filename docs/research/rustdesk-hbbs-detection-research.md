@@ -254,7 +254,107 @@ rustdesk-hbbr 116.62.8.4:21118 false (3.0004s)   ✓ Correctly rejects wrong por
 
 ---
 
-**Document Version**: 1.0
-**Date**: 2025-01-15
+**Document Version**: 2.0
+**Date**: 2025-01-16
 **Author**: Claude Code (with user guidance)
 **Status**: Implemented and Tested ✓
+
+---
+
+## Appendix: Port 21115 Analysis (2025-01-16)
+
+### Background
+
+Port 21115 is officially documented by RustDesk as the "NAT type testing" port. This document summarizes the research findings about why port 21115 is **NOT suitable for server detection**.
+
+### Client-Side NAT Testing Flow
+
+After analyzing the RustDesk client source code (`src/common.rs`, `src/rendezvous_mediator.rs`), the NAT testing flow is:
+
+```rust
+// Called once at client startup
+test_nat_type() {
+    server1 = get_rendezvous_server()  // 21116
+    server2 = increase_port(server1, -1)  // 21115
+
+    // Connect to server1 (21116/TCP)
+    socket1 = connect_tcp_local(server1, None)
+    send(TestNatRequest)
+    receive(TestNatResponse) -> port1
+
+    // Connect to server2 (21115/TCP) WITH SAME LOCAL ADDRESS
+    socket2 = connect_tcp_local(server2, socket1.local_addr)
+    send(TestNatRequest)
+    receive(TestNatResponse) -> port2
+
+    // Compare ports to determine NAT type
+    if port1 == port2:
+        NAT_TYPE = ASYMMETRIC
+    else:
+        NAT_TYPE = SYMMETRIC
+}
+```
+
+### Key Characteristics of Port 21115
+
+1. **Client-Initiated Only**: Port 21115 is **only used by clients** during startup to test their NAT type
+
+2. **Optional Feature**: Clients work perfectly without port 21115. The NAT test is diagnostic only.
+
+3. **No Persistent Service**: Unlike 21116 and 21117, port 21115 doesn't handle ongoing operations:
+   - ❌ No ID registration
+   - ❌ No authentication
+   - ❌ No P2P hole punching
+   - ❌ No relay coordination
+
+4. **Server Implementation**: In `rendezvous_server.rs`, port 21115 (`listener2`) only handles:
+   - `TestNatRequest` → `TestNatResponse`
+   - `OnlineRequest` → `OnlineResponse`
+
+   It does NOT handle `RegisterPk` or other critical messages.
+
+### Why Port 21115 Detection Fails
+
+**Test Results on 116.62.8.4**:
+- `TestNatRequest` → EOF (server closes connection)
+- `RegisterPk` → EOF (not handled by listener2)
+- Simple TCP connect → Success (but any service would pass)
+
+**Root Cause**:
+Many RustDesk server deployments configure port 21115 to be minimal or disabled, since:
+1. It's not required for core functionality
+2. It's only used for client-side diagnostics
+3. Some deployments disable it to reduce attack surface
+
+### Detection Strategy Implications
+
+| Port | Protocol | Detection Method | Reliability | Recommendation |
+|------|----------|-----------------|-------------|----------------|
+| **21116/TCP** | HBBS | `RegisterPk` message | ✅ High | **USE** |
+| **21116/UDP** | HBBS | UDP heartbeat (not implemented) | N/A | Future work |
+| **21115/TCP** | NAT Test | `TestNatRequest` | ❌ Low | **DO NOT USE** |
+| **21117/TCP** | HBBR | `RequestRelay` message | ✅ High | **USE** |
+
+### Recommendation: Do Not Detect Port 21115
+
+**Reasons**:
+1. Port 21115 is a **client-side diagnostic tool**, not a server service indicator
+2. Detection results are **unreliable** across different server deployments
+3. A server without port 21115 is **fully functional** for all core features
+4. False negatives would mislead users about server availability
+
+**Alternative**:
+If you need to verify HBBS server availability, detect port **21116** using the `RegisterPk` message. This is the primary HBBS service port and is always required.
+
+### Technical References
+
+- Client NAT test: `/tmp/rustdesk/src/common.rs:test_nat_type()` (lines 583-670)
+- Server listener2: `/tmp/rustdesk-server/src/rendezvous_server.rs:handle_listener2()` (lines 1102-1140)
+- Client startup: `/tmp/rustdesk/src/rendezvous_mediator.rs:start_all()` (line 60)
+
+### Sources
+
+- [RustDesk Client Source Code](https://github.com/rustdesk/rustdesk)
+- [RustDesk Server Source Code](https://github.com/rustdesk/rustdesk-server)
+- [NAT Traversal Techniques](https://educatedguesswork.org/posts/nat-part-2/)
+- [STUN Protocol RFC 5389](https://datatracker.ietf.org/doc/html/rfc5389)

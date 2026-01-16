@@ -7,8 +7,9 @@ import (
 
 func TestDetector_HBBSCheck(t *testing.T) {
 	d := NewDetector(3 * time.Second)
-	// Test against known RustDesk server
-	err := d.HBBSCheck("116.62.8.4", "21115")
+	// Test against known RustDesk server (port 21116)
+	// Note: Port 21115 is NOT detected - see internal/feature/rustdesk/README.md for details
+	err := d.HBBSCheck("116.62.8.4", "21116")
 	if err != nil {
 		t.Logf("HBBS check failed (server may be unavailable): %v", err)
 	}

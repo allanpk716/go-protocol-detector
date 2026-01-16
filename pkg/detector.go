@@ -93,9 +93,9 @@ func (d Detector) CommonPortCheck(host, port string) error {
 }
 
 func (d Detector) HBBSCheck(host, port string) error {
-	// HBBS uses protobuf-based detection with TestNatRequest
-	// The server responds with TestNatResponse containing the port number
-	return d.commonCheck(host, port, d.rustdeskHBBS.SenderPackage, d.rustdeskHBBS.ReceiverFeatures, custom_error.ErrRustDeskHBBSNotFound)
+	// HBBS 21116 uses RegisterPk message for reliable detection
+	// Note: Port 21115 (NAT test) is NOT detected - see internal/feature/rustdesk/README.md
+	return d.commonCheck(host, port, d.rustdeskHBBS21116.SenderPackage, d.rustdeskHBBS21116.ReceiverFeatures, custom_error.ErrRustDeskHBBS21116NotFound)
 }
 
 func (d Detector) HBBRCheck(host, port string) error {
