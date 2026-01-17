@@ -68,6 +68,12 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 		defer func() {
 			if r := recover(); r != nil {
 				log.Printf("Recovered from panic in goroutine: %v", r)
+				// Update progress even on panic
+				deliveryInfo := inData.(DeliveryInfo)
+				if deliveryInfo.ProgressManager != nil {
+					portInt, _ := strconv.Atoi(deliveryInfo.Port)
+					deliveryInfo.ProgressManager.IncrementPort(portInt)
+				}
 			}
 		}()
 
@@ -394,6 +400,12 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 		defer func() {
 			if r := recover(); r != nil {
 				log.Printf("Recovered from panic in goroutine: %v", r)
+				// Update progress even on panic
+				deliveryInfo := inData.(DeliveryInfo)
+				if deliveryInfo.ProgressManager != nil {
+					portInt, _ := strconv.Atoi(deliveryInfo.Port)
+					deliveryInfo.ProgressManager.IncrementPort(portInt)
+				}
 			}
 		}()
 
