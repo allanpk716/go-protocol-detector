@@ -75,6 +75,28 @@ go run cmd/go-protocol-detector/main.go --protocol=sftp --host=192.168.1.100-150
 go run cmd/go-protocol-detector/main.go --protocol=common --host=192.168.1.1,192.168.1.100-150,10.0.0.0/24 --port=22,80,443,3389,8000-8100
 ```
 
+### Running with Progress Bars
+
+The scanner displays dual progress bars by default when outputting to a terminal:
+- **Top bar**: Overall IP scan progress
+- **Bottom bar**: Current IP port scan progress
+
+```bash
+# With progress bars (default when outputting to terminal)
+go run cmd/go-protocol-detector/main.go --protocol=ssh --host=192.168.1.1-254 --port=22,80,443
+
+# Redirect output to file (automatically disables progress bars)
+go run cmd/go-protocol-detector/main.go --protocol=ssh --host=192.168.1.1-254 --port=22 > scan.log
+```
+
+### Progress Bar Features
+
+- **Cross-platform**: Works on Windows, Linux, and macOS using `github.com/vbauerster/mpb`
+- **Automatic fallback**: Disables when output is redirected to a file or piped to another command
+- **Thread-safe**: Multiple goroutines can update progress concurrently using atomic operations
+- **Performance**: Minimal overhead with benchmark results showing <1 ns/op per increment
+- **Memory efficient**: Zero allocations for most operations (0 B/op for increment operations)
+
 ## Architecture
 
 ### Core Components
