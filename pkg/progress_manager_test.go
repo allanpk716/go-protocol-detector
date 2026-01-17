@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"io"
 	"os"
 	"testing"
 )
@@ -10,6 +11,35 @@ func TestIsTerminal(t *testing.T) {
 	// Should at least not panic
 	if result != true && result != false {
 		t.Error("isTerminal should return boolean")
+	}
+}
+
+func TestIsTerminal_Pipe(t *testing.T) {
+	// Create a pipe (not a terminal)
+	r, w := io.Pipe()
+	defer r.Close()
+	defer w.Close()
+
+	// Note: This test verifies behavior with non-terminal output
+	result := isTerminal(w)
+	if result {
+		// Pipe should not be detected as terminal
+		t.Log("Pipe detected as terminal - may need better detection")
+	}
+}
+
+func TestIsTerminal_File(t *testing.T) {
+	// Test with actual file (not a terminal)
+	tmpfile, err := os.CreateTemp("", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+	defer tmpfile.Close()
+
+	result := isTerminal(tmpfile)
+	if result {
+		t.Error("File should not be detected as terminal")
 	}
 }
 

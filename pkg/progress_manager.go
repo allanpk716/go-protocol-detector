@@ -5,6 +5,7 @@ import (
 	"os"
 	"runtime"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/vbauerster/mpb/v8"
@@ -23,6 +24,12 @@ type ProgressManager struct {
 	portMutex  sync.Mutex
 	disabled   bool
 }
+
+var (
+	kernel32                       = syscall.NewLazyDLL("kernel32.dll")
+	procSetConsoleMode             = kernel32.NewProc("SetConsoleMode")
+	ENABLE_VIRTUAL_TERMINAL_PROCESSING uint32 = 0x0004
+)
 
 // NewProgressManager creates a new progress manager with dual progress bars
 func NewProgressManager(totalIPs, totalPorts int) *ProgressManager {
@@ -76,16 +83,25 @@ func NewProgressManager(totalIPs, totalPorts int) *ProgressManager {
 
 // isTerminal checks if the writer is a terminal
 func isTerminal(w io.Writer) bool {
-	// TODO: Implement terminal detection
-	// For now, always return true to enable progress bars
-	return true
+	if f, ok := w.(*os.File); ok {
+		var st uint32
+		err := syscall.GetConsoleMode(syscall.Handle(f.Fd()), &st)
+		return err == nil
+	}
+	return false
 }
 
 // enableVirtualTerminalProcessing enables ANSI colors on Windows 10+
 func enableVirtualTerminalProcessing(w io.Writer) {
-	// TODO: Implement Windows terminal detection
-	// This would involve Windows API calls to enable virtual terminal processing
-	// For now, we'll skip this implementation
+	if f, ok := w.(*os.File); ok {
+		var mode uint32
+		handle := syscall.Handle(f.Fd())
+		if syscall.GetConsoleMode(handle, &mode) == nil {
+			// Enable virtual terminal processing
+			mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING
+			procSetConsoleMode.Call(uintptr(handle), uintptr(mode))
+		}
+	}
 }
 
 // IncrementIP advances the IP progress bar by one
