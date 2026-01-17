@@ -357,7 +357,7 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 }
 
 // ScanWithOutput scans with enhanced CSV logging and progress tracking
-func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo, showProgressStep bool, csvOutputPath string) (*OutputInfo, *ScanContext, error) {
+func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo, showProgressStep bool, csvOutputPath string, enableProgress bool) (*OutputInfo, *ScanContext, error) {
 	// Create scan context for tracking
 	scanContext := NewScanContext(protocolType, inputInfo.Host, inputInfo.Port, s.threads, int(s.timeOut.Milliseconds()))
 
@@ -576,7 +576,7 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 	}
 
 	// Initialize progress manager if showing progress
-	if showProgressStep {
+	if showProgressStep && enableProgress {
 		progressManager = NewProgressManager(totalIPs, len(ports))
 		defer progressManager.Finish()
 	}

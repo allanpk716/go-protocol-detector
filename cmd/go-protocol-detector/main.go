@@ -84,6 +84,12 @@ func main() {
 				Value:       "",
 				Destination: &csvOutput,
 			},
+			&cli.BoolFlag{
+				Name:    "no-progress",
+				Usage:   "disable progress bar output",
+				Aliases: []string{"np"},
+				Value:   false,
+			},
 		},
 		Action: func(c *cli.Context) error {
 			// 检查是否没有任何参数被传递，如果没有则显示帮助信息
@@ -107,7 +113,7 @@ func main() {
 					User:               user,
 					Password:           password,
 					PrivateKeyFullPath: priKeyFullPath,
-				}, true, csvOutput)
+				}, true, csvOutput, !c.Bool("no-progress"))
 			} else {
 				// Don't save to CSV, just scan and show console output
 				outputInfo, err = scanTools.Scan(nowProtocol, pkg.InputInfo{
