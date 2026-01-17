@@ -1,7 +1,6 @@
 package pkg
 
 import (
-	"io"
 	"os"
 	"sync"
 	"time"
@@ -69,26 +68,6 @@ func NewProgressManager(totalIPs, totalPorts int) *ProgressManager {
 		totalIPs:   int64(totalIPs),
 		totalPorts: int64(totalPorts),
 	}
-}
-
-// isTerminal checks if the writer is a terminal.
-// Platform-specific implementations in:
-//   - progress_manager_windows.go
-//   - progress_manager_linux.go
-//   - progress_manager_darwin.go
-func isTerminal(w io.Writer) bool {
-	// Default fallback - should never be called as platform-specific
-	// implementations will be used
-	return false
-}
-
-// enableVirtualTerminalProcessing enables ANSI escape sequences.
-// Platform-specific implementations in:
-//   - progress_manager_windows.go
-//   - progress_manager_linux.go
-//   - progress_manager_darwin.go
-func enableVirtualTerminalProcessing(w io.Writer) {
-	// Platform-specific implementation
 }
 
 // IncrementIP advances the IP progress bar by one
