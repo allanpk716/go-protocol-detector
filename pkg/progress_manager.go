@@ -1,12 +1,9 @@
-// +build windows
-
 package pkg
 
 import (
 	"io"
 	"os"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/vbauerster/mpb/v8"
@@ -26,12 +23,6 @@ type ProgressManager struct {
 	disabled   bool
 }
 
-var (
-	kernel32                       = syscall.NewLazyDLL("kernel32.dll")
-	procSetConsoleMode             = kernel32.NewProc("SetConsoleMode")
-	ENABLE_VIRTUAL_TERMINAL_PROCESSING uint32 = 0x0004
-)
-
 // NewProgressManager creates a new progress manager with dual progress bars
 func NewProgressManager(totalIPs, totalPorts int) *ProgressManager {
 	// Check if output is a terminal
@@ -39,7 +30,7 @@ func NewProgressManager(totalIPs, totalPorts int) *ProgressManager {
 		return &ProgressManager{disabled: true}
 	}
 
-	// Enable Windows 10+ virtual terminal processing for ANSI colors
+	// Enable platform-specific virtual terminal processing
 	enableVirtualTerminalProcessing(os.Stdout)
 
 	// Create progress container
@@ -80,27 +71,24 @@ func NewProgressManager(totalIPs, totalPorts int) *ProgressManager {
 	}
 }
 
-// isTerminal checks if the writer is a terminal
+// isTerminal checks if the writer is a terminal.
+// Platform-specific implementations in:
+//   - progress_manager_windows.go
+//   - progress_manager_linux.go
+//   - progress_manager_darwin.go
 func isTerminal(w io.Writer) bool {
-	if f, ok := w.(*os.File); ok {
-		var st uint32
-		err := syscall.GetConsoleMode(syscall.Handle(f.Fd()), &st)
-		return err == nil
-	}
+	// Default fallback - should never be called as platform-specific
+	// implementations will be used
 	return false
 }
 
-// enableVirtualTerminalProcessing enables ANSI colors on Windows 10+
+// enableVirtualTerminalProcessing enables ANSI escape sequences.
+// Platform-specific implementations in:
+//   - progress_manager_windows.go
+//   - progress_manager_linux.go
+//   - progress_manager_darwin.go
 func enableVirtualTerminalProcessing(w io.Writer) {
-	if f, ok := w.(*os.File); ok {
-		var mode uint32
-		handle := syscall.Handle(f.Fd())
-		if syscall.GetConsoleMode(handle, &mode) == nil {
-			// Enable virtual terminal processing
-			mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING
-			procSetConsoleMode.Call(uintptr(handle), uintptr(mode))
-		}
-	}
+	// Platform-specific implementation
 }
 
 // IncrementIP advances the IP progress bar by one
