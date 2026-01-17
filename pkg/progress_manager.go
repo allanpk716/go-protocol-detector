@@ -1,9 +1,10 @@
+// +build windows
+
 package pkg
 
 import (
 	"io"
 	"os"
-	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -38,10 +39,8 @@ func NewProgressManager(totalIPs, totalPorts int) *ProgressManager {
 		return &ProgressManager{disabled: true}
 	}
 
-	// Enable Windows 10+ virtual terminal processing
-	if runtime.GOOS == "windows" {
-		enableVirtualTerminalProcessing(os.Stdout)
-	}
+	// Enable Windows 10+ virtual terminal processing for ANSI colors
+	enableVirtualTerminalProcessing(os.Stdout)
 
 	// Create progress container
 	p := mpb.New(
