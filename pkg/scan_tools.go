@@ -93,6 +93,11 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 			checkResult.Success = false
 			// 即使获取连接失败也要确保WaitGroup被正确处理
 			defer func() {
+				// Update port progress even on connection failure
+				if deliveryInfo.ProgressManager != nil {
+					portInt, _ := strconv.Atoi(deliveryInfo.Port)
+					deliveryInfo.ProgressManager.IncrementPort(portInt)
+				}
 				if showProgressStep {
 					log.Printf("%s %s:%s %v (connection denied)", protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success)
 				}
@@ -112,6 +117,12 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 		defer func() {
 			// 计算响应时间并记录结果
 			checkResult.ResponseTime = time.Since(startTime)
+
+			// Update port progress
+			if deliveryInfo.ProgressManager != nil {
+				portInt, _ := strconv.Atoi(deliveryInfo.Port)
+				deliveryInfo.ProgressManager.IncrementPort(portInt)
+			}
 
 			// 确保在所有情况下都正确处理资源清理
 			if showProgressStep == true {
@@ -408,6 +419,11 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 			checkResult.Success = false
 			// 即使获取连接失败也要确保WaitGroup被正确处理
 			defer func() {
+				// Update port progress even on connection failure
+				if deliveryInfo.ProgressManager != nil {
+					portInt, _ := strconv.Atoi(deliveryInfo.Port)
+					deliveryInfo.ProgressManager.IncrementPort(portInt)
+				}
 				if showProgressStep {
 					log.Printf("%s %s:%s %v (connection denied)", protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success)
 				}
@@ -427,6 +443,12 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 		defer func() {
 			// 计算响应时间并记录结果
 			checkResult.ResponseTime = time.Since(startTime)
+
+			// Update port progress
+			if deliveryInfo.ProgressManager != nil {
+				portInt, _ := strconv.Atoi(deliveryInfo.Port)
+				deliveryInfo.ProgressManager.IncrementPort(portInt)
+			}
 
 			// 确保在所有情况下都正确处理资源清理
 			if showProgressStep == true {
@@ -672,6 +694,7 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 						PrivateKeyFullPath: inputInfo.PrivateKeyFullPath,
 						CheckResultChan:    checkResultChan,
 						Wg:                 wg,
+						ProgressManager:    progressManager,
 					}
 
 					// 先增加WaitGroup计数器
@@ -717,6 +740,7 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 						PrivateKeyFullPath: inputInfo.PrivateKeyFullPath,
 						CheckResultChan:    checkResultChan,
 						Wg:                 wg,
+						ProgressManager:    progressManager,
 					}
 
 					// 先增加WaitGroup计数器
@@ -998,6 +1022,7 @@ type DeliveryInfo struct {
 	Detector           *Detector
 	CheckResultChan    chan CheckResult
 	Wg                 *sync.WaitGroup
+	ProgressManager    *ProgressManager // Added for progress tracking
 }
 
 type CheckResult struct {
