@@ -104,26 +104,16 @@ func main() {
 			var outputInfo *pkg.OutputInfo
 			var err error
 
-			// Check if CSV output is enabled (only when --csv-output is specified)
-			if csvOutput != "" {
-				// Use ScanWithOutput for CSV output
-				outputInfo, _, err = scanTools.ScanWithOutput(nowProtocol, pkg.InputInfo{
-					Host:               host,
-					Port:               port,
-					User:               user,
-					Password:           password,
-					PrivateKeyFullPath: priKeyFullPath,
-				}, true, csvOutput, !c.Bool("no-progress"))
-			} else {
-				// Don't save to CSV, just scan and show console output
-				outputInfo, err = scanTools.Scan(nowProtocol, pkg.InputInfo{
-					Host:               host,
-					Port:               port,
-					User:               user,
-					Password:           password,
-					PrivateKeyFullPath: priKeyFullPath,
-				}, true)
-			}
+			// Use ScanWithOutput for all scans (it supports progress bars)
+			// showProgressStep = false to disable per-port logging (too verbose)
+			// enableProgress = true to show progress bars (unless --no-progress flag is set)
+			outputInfo, _, err = scanTools.ScanWithOutput(nowProtocol, pkg.InputInfo{
+				Host:               host,
+				Port:               port,
+				User:               user,
+				Password:           password,
+				PrivateKeyFullPath: priKeyFullPath,
+			}, false, csvOutput, !c.Bool("no-progress"))
 
 			if err != nil {
 				return err

@@ -575,8 +575,8 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 		}
 	}
 
-	// Initialize progress manager if showing progress
-	if showProgressStep && enableProgress {
+	// Initialize progress manager if enabled (independent of showProgressStep)
+	if enableProgress {
 		progressManager = NewProgressManager(totalIPs, len(ports))
 		defer progressManager.Finish()
 	}

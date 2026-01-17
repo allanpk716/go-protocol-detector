@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -20,20 +21,50 @@ type ProgressManager struct {
 	ipMutex    sync.Mutex
 	portMutex  sync.Mutex
 	disabled   bool
+	ipCount    int64
+	portCount  int64
 }
 
 // NewProgressManager creates a new progress manager with dual progress bars
 func NewProgressManager(totalIPs, totalPorts int) *ProgressManager {
-	// Check if output is a terminal
-	if !isTerminal(os.Stdout) {
+	// Check if output is being redirected to a file (not a terminal)
+	// If it's redirected to a file, disable progress bars
+	fileInfo, _ := os.Stdout.Stat()
+	if fileInfo == nil {
+		// If we can't get file info, assume it's not a terminal and disable
 		return &ProgressManager{disabled: true}
+	}
+
+	// Check if stdout is a regular file (output redirected)
+	// In this case, we should disable progress bars
+	if fileInfo.Mode()&os.ModeCharDevice == 0 {
+		// Not a character device - likely a file or pipe
+		// Only disable if it's explicitly a regular file
+		if fileInfo.Mode().IsRegular() {
+			return &ProgressManager{disabled: true}
+		}
+		// For pipes (like in Git Bash), fall back to simple text progress
+		pm := &ProgressManager{
+			progress:   nil,
+			ipBar:      nil,
+			portBar:    nil,
+			totalIPs:   int64(totalIPs),
+			totalPorts: int64(totalPorts),
+			disabled:   false,
+			ipCount:    0,
+			portCount:  0,
+		}
+		return pm
 	}
 
 	// Enable platform-specific virtual terminal processing
 	enableVirtualTerminalProcessing(os.Stdout)
 
 	// Create progress container
+	// Use mpb.WithOutput to explicitly set the output writer
+	// Use mpb.WithManualRefresh to force rendering in all environments
 	p := mpb.New(
+		mpb.WithOutput(os.Stdout),
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(100*time.Millisecond),
 	)
@@ -67,6 +98,9 @@ func NewProgressManager(totalIPs, totalPorts int) *ProgressManager {
 		portBar:    portBar,
 		totalIPs:   int64(totalIPs),
 		totalPorts: int64(totalPorts),
+		disabled:   false,
+		ipCount:    0,
+		portCount:  0,
 	}
 }
 
@@ -77,7 +111,16 @@ func (pm *ProgressManager) IncrementIP(ip string) {
 	}
 	pm.ipMutex.Lock()
 	defer pm.ipMutex.Unlock()
-	pm.ipBar.Increment()
+	if pm.progress != nil && pm.ipBar != nil {
+		pm.ipBar.Increment()
+	} else {
+		pm.ipCount++
+		// Fallback to simple text progress with carriage return for in-place update
+		if pm.totalIPs > 0 {
+			percent := float64(pm.ipCount) / float64(pm.totalIPs) * 100
+			fmt.Printf("\rProgress: %.1f%% (%d/%d IPs)", percent, pm.ipCount, pm.totalIPs)
+		}
+	}
 }
 
 // IncrementPort advances the port progress bar by one
@@ -87,7 +130,11 @@ func (pm *ProgressManager) IncrementPort(port int) {
 	}
 	pm.portMutex.Lock()
 	defer pm.portMutex.Unlock()
-	pm.portBar.Increment()
+	if pm.progress != nil && pm.portBar != nil {
+		pm.portBar.Increment()
+	} else {
+		pm.portCount++
+	}
 }
 
 // StartNewIP resets the port progress bar for a new IP
@@ -98,8 +145,11 @@ func (pm *ProgressManager) StartNewIP(ip string) {
 	pm.portMutex.Lock()
 	defer pm.portMutex.Unlock()
 	pm.currentIP = ip
-	pm.portBar.SetTotal(0, false)
-	pm.portBar.SetTotal(pm.totalPorts, false)
+	if pm.portBar != nil {
+		pm.portBar.SetTotal(0, false)
+		pm.portBar.SetTotal(pm.totalPorts, false)
+	}
+	pm.portCount = 0 // Reset port counter for text fallback
 }
 
 // Wait waits for all progress bars to complete their rendering
@@ -108,14 +158,25 @@ func (pm *ProgressManager) Wait() {
 		return
 	}
 	// Abort the bars to make them complete immediately
-	pm.ipBar.Abort(true)
-	pm.portBar.Abort(true)
-	pm.progress.Wait()
+	if pm.ipBar != nil {
+		pm.ipBar.Abort(true)
+	}
+	if pm.portBar != nil {
+		pm.portBar.Abort(true)
+	}
+	if pm.progress != nil {
+		pm.progress.Wait()
+	}
 }
 
 // Finish marks all progress bars as complete
 func (pm *ProgressManager) Finish() {
 	if pm.disabled {
+		return
+	}
+	// Print newline if using text fallback
+	if pm.progress == nil || pm.ipBar == nil {
+		fmt.Println() // Move to next line after progress text
 		return
 	}
 	// Abort the bars to make them complete immediately

@@ -15,11 +15,23 @@ var (
 )
 
 // isTerminal checks if the writer is a terminal on Windows
+// This works with native Windows console and Git Bash/MSYS2 terminals
 func isTerminal(w io.Writer) bool {
 	if f, ok := w.(*os.File); ok {
+		// Try native Windows console check first
 		var st uint32
 		err := syscall.GetConsoleMode(syscall.Handle(f.Fd()), &st)
-		return err == nil
+		if err == nil {
+			return true // Native Windows console
+		}
+
+		// For Git Bash/MSYS2, check if output is to a terminal (not a file/pipe)
+		// In Git Bash, file descriptor 1 (stdout) is a terminal when running interactively
+		// We can check this by seeing if the file is a character device
+		fileInfo, _ := f.Stat()
+		if fileInfo != nil && (fileInfo.Mode()&os.ModeCharDevice) != 0 {
+			return true // Character device (likely a terminal)
+		}
 	}
 	return false
 }
