@@ -113,8 +113,8 @@ func (pm *ProgressManager) StartNewIP(ip string) {
 	if pm.disabled {
 		return
 	}
-	pm.ipMutex.Lock()
-	defer pm.ipMutex.Unlock()
+	pm.portMutex.Lock()
+	defer pm.portMutex.Unlock()
 	pm.currentIP = ip
 	pm.portBar.SetTotal(0, false)
 	pm.portBar.SetTotal(pm.totalPorts, false)
@@ -125,9 +125,10 @@ func (pm *ProgressManager) Wait() {
 	if pm.disabled {
 		return
 	}
-	// Complete the bars before waiting
-	pm.ipBar.SetTotal(0, true)
-	pm.portBar.SetTotal(0, true)
+	// Abort the bars to make them complete immediately
+	pm.ipBar.Abort(true)
+	pm.portBar.Abort(true)
+	pm.progress.Wait()
 }
 
 // Finish marks all progress bars as complete
@@ -138,4 +139,5 @@ func (pm *ProgressManager) Finish() {
 	// Abort the bars to make them complete immediately
 	pm.ipBar.Abort(true)
 	pm.portBar.Abort(true)
+	pm.progress.Wait()
 }
