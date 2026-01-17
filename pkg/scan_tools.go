@@ -24,7 +24,6 @@ type ScanTools struct {
 	threads        int                    // 同时扫描的并发数
 	timeOut        time.Duration          // 超时时间
 	resourceLimiter *utils.ResourceLimiter // 资源限制器
-	rateLimiter    *utils.RateLimiter     // 速率限制器
 }
 
 func NewScanTools(threads int, timeOut time.Duration) *ScanTools {
@@ -52,7 +51,6 @@ func NewScanTools(threads int, timeOut time.Duration) *ScanTools {
 		threads:         threads,
 		timeOut:         timeOut,
 		resourceLimiter: utils.NewResourceLimiter(maxConnections, 512),
-		rateLimiter:     utils.NewRateLimiter(maxConnections), // 每秒最多maxConnections个请求
 	}
 
 	return scan
@@ -110,26 +108,6 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 
 		// 确保释放连接
 		defer releaseConn()
-
-		// 应用速率限制
-		if err := s.rateLimiter.Wait(ctx); err != nil {
-			checkResult.ResponseTime = time.Since(startTime)
-			checkResult.ErrorMessage = fmt.Sprintf("Rate limited: %v", err)
-			log.Printf("Rate limit exceeded for %s:%s: %v", deliveryInfo.Host, deliveryInfo.Port, err)
-			checkResult.Success = false
-			defer func() {
-				if showProgressStep {
-					log.Printf("%s %s:%s %v (rate limited)", protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success)
-				}
-				select {
-				case deliveryInfo.CheckResultChan <- checkResult:
-				default:
-					log.Printf("Warning: result channel is full, dropping result for %s:%s", deliveryInfo.Host, deliveryInfo.Port)
-				}
-				deliveryInfo.Wg.Done()
-			}()
-			return
-		}
 
 		defer func() {
 			// 计算响应时间并记录结果
@@ -358,9 +336,6 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 	stats := s.resourceLimiter.GetStats()
 	log.Printf("Scan completed - %s", stats.String())
 
-	// 停止速率限制器
-	s.rateLimiter.Stop()
-
 	return &outputInfo, nil
 }
 
@@ -445,26 +420,6 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 
 		// 确保释放连接
 		defer releaseConn()
-
-		// 应用速率限制
-		if err := s.rateLimiter.Wait(ctx); err != nil {
-			checkResult.ResponseTime = time.Since(startTime)
-			checkResult.ErrorMessage = fmt.Sprintf("Rate limited: %v", err)
-			log.Printf("Rate limit exceeded for %s:%s: %v", deliveryInfo.Host, deliveryInfo.Port, err)
-			checkResult.Success = false
-			defer func() {
-				if showProgressStep {
-					log.Printf("%s %s:%s %v (rate limited)", protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success)
-				}
-				select {
-				case deliveryInfo.CheckResultChan <- checkResult:
-				default:
-					log.Printf("Warning: result channel is full, dropping result for %s:%s", deliveryInfo.Host, deliveryInfo.Port)
-				}
-				deliveryInfo.Wg.Done()
-			}()
-			return
-		}
 
 		defer func() {
 			// 计算响应时间并记录结果
@@ -776,9 +731,6 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 	// 记录资源使用统计
 	stats := s.resourceLimiter.GetStats()
 	log.Printf("Scan completed - %s", stats.String())
-
-	// 停止速率限制器
-	s.rateLimiter.Stop()
 
 	return &outputInfo, scanContext, nil
 }

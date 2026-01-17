@@ -7,3 +7,4 @@
 /.spec-workflow
 coverage.out
 .claude/
+.no-pushover
