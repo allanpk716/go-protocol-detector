@@ -344,6 +344,9 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 	// Create scan context for tracking
 	scanContext := NewScanContext(protocolType, inputInfo.Host, inputInfo.Port, s.threads, int(s.timeOut.Milliseconds()))
 
+	// Create progress manager (will be initialized after parsing hosts/ports)
+	var progressManager *ProgressManager
+
 	// Create resume manager if output path is provided
 	var resumeManager *ResumeManager
 	if csvOutputPath != "" {
@@ -527,6 +530,23 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 		return nil, nil, errors.NewValidationError("failed to parse ports", err)
 	}
 
+	// Calculate total IPs for progress bar
+	totalIPs := 0
+	for _, ipRangeInfo := range ipRangeInfos {
+		if ipRangeInfo.CICR != nil {
+			// Get IP count from CIDR
+			totalIPs += int(ipRangeInfo.CICR.IPCount().Int64())
+		} else {
+			totalIPs += ipRangeInfo.CountNextTime
+		}
+	}
+
+	// Initialize progress manager if showing progress
+	if showProgressStep {
+		progressManager = NewProgressManager(totalIPs, len(ports))
+		defer progressManager.Finish()
+	}
+
 	// Generate target list for scan context
 	var allTargets []string
 	for _, ipRangeInfo := range ipRangeInfos {
@@ -637,6 +657,9 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 		if ipRangeInfo.CICR != nil {
 			// 使用 CICR 去遍历
 			err = ipRangeInfo.CICR.ForEachIP(func(ip string) error {
+				if progressManager != nil {
+					progressManager.StartNewIP(ip)
+				}
 				for _, port := range ports {
 					// 创建deliveryInfo
 					deliveryInfo := DeliveryInfo{
@@ -667,12 +690,20 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 			if err != nil {
 				return nil, nil, fmt.Errorf("scan - ForEachIP error: %w", err)
 			}
+
+			if progressManager != nil {
+				progressManager.IncrementIP("completed")
+			}
 		} else {
 			// 使用内置的段规则去遍历
 			startIP := ipRangeInfo.Begin
 			for i := 0; i < ipRangeInfo.CountNextTime; i++ {
 				if i != 0 {
 					startIP.To4()[3] += uint8(1)
+				}
+
+				if progressManager != nil {
+					progressManager.StartNewIP(startIP.String())
 				}
 				for _, port := range ports {
 					// 创建deliveryInfo
@@ -698,6 +729,10 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 						wg.Done()
 						return nil, nil, errors.NewResourceLimitError("failed to invoke scan task", err)
 					}
+				}
+
+				if progressManager != nil {
+					progressManager.IncrementIP(startIP.String())
 				}
 			}
 		}
