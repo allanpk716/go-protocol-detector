@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"sync"
 	"time"
@@ -23,6 +24,8 @@ type ProgressManager struct {
 	disabled   bool
 	ipCount    int64
 	portCount  int64
+	shutdownCh chan interface{}
+	out        io.Writer
 }
 
 // NewProgressManager creates a new progress manager with dual progress bars
@@ -43,30 +46,24 @@ func NewProgressManager(totalIPs, totalPorts int) *ProgressManager {
 		if fileInfo.Mode().IsRegular() {
 			return &ProgressManager{disabled: true}
 		}
-		// For pipes (like in Git Bash), fall back to simple text progress
-		pm := &ProgressManager{
-			progress:   nil,
-			ipBar:      nil,
-			portBar:    nil,
-			totalIPs:   int64(totalIPs),
-			totalPorts: int64(totalPorts),
-			disabled:   false,
-			ipCount:    0,
-			portCount:  0,
-		}
-		return pm
 	}
 
-	// Enable platform-specific virtual terminal processing
-	enableVirtualTerminalProcessing(os.Stdout)
+	errInfo, _ := os.Stderr.Stat()
+	if errInfo != nil && errInfo.Mode().IsRegular() {
+		return &ProgressManager{disabled: true}
+	}
+
+	// Enable platform-specific virtual terminal processing BEFORE creating progress bars
+	// This is critical for Windows PowerShell/CMD to support ANSI escape sequences
+	enableVirtualTerminalProcessing(os.Stderr)
 
 	// Create progress container
-	// Use mpb.WithOutput to explicitly set the output writer
-	// Use mpb.WithManualRefresh to force rendering in all environments
+	shutdownCh := make(chan interface{}, 1)
+	out := io.Writer(os.Stderr)
 	p := mpb.New(
-		mpb.WithOutput(os.Stdout),
+		mpb.WithOutput(out),
 		mpb.WithWidth(60),
-		mpb.WithRefreshRate(100*time.Millisecond),
+		mpb.WithShutdownNotifier(shutdownCh),
 	)
 
 	// Create IP progress bar
@@ -80,28 +77,36 @@ func NewProgressManager(totalIPs, totalPorts int) *ProgressManager {
 		),
 	)
 
-	// Create port progress bar
-	portBar := p.AddBar(int64(totalPorts),
-		mpb.PrependDecorators(
-			decor.Name("Current IP: ", decor.WC{C: 20}),
-			decor.Name("scanning ports", decor.WC{C: 20}),
-		),
-		mpb.AppendDecorators(
-			decor.CountersNoUnit(" %d / %d", decor.WC{C: 15}),
-			decor.Percentage(decor.WC{C: 5}),
-		),
-	)
-
-	return &ProgressManager{
+	pm := &ProgressManager{
 		progress:   p,
 		ipBar:      ipBar,
-		portBar:    portBar,
+		portBar:    nil,
 		totalIPs:   int64(totalIPs),
 		totalPorts: int64(totalPorts),
 		disabled:   false,
 		ipCount:    0,
 		portCount:  0,
+		shutdownCh: shutdownCh,
+		out:        out,
 	}
+
+	pm.portBar = pm.progress.AddBar(pm.totalPorts,
+		mpb.PrependDecorators(
+			decor.Any(func(_ decor.Statistics) string {
+				pm.ipMutex.Lock()
+				ip := pm.currentIP
+				pm.ipMutex.Unlock()
+				return fmt.Sprintf("IP: %-15s Ports: ", ip)
+			}, decor.WC{C: 25}),
+		),
+		mpb.AppendDecorators(
+			decor.CountersNoUnit(" %d / %d", decor.WC{C: 15}),
+			decor.Percentage(decor.WC{C: 5}),
+		),
+		mpb.BarRemoveOnComplete(),
+	)
+
+	return pm
 }
 
 // IncrementIP advances the IP progress bar by one
@@ -118,7 +123,7 @@ func (pm *ProgressManager) IncrementIP(ip string) {
 		// Fallback to simple text progress with carriage return for in-place update
 		if pm.totalIPs > 0 {
 			percent := float64(pm.ipCount) / float64(pm.totalIPs) * 100
-			fmt.Printf("\rProgress: %.1f%% (%d/%d IPs)", percent, pm.ipCount, pm.totalIPs)
+			fmt.Fprintf(pm.out, "\rProgress: %.1f%% (%d/%d IPs)", percent, pm.ipCount, pm.totalIPs)
 		}
 	}
 }
@@ -137,19 +142,23 @@ func (pm *ProgressManager) IncrementPort(port int) {
 	}
 }
 
-// StartNewIP resets the port progress bar for a new IP
+// StartNewIP creates a new port progress bar for the current IP
 func (pm *ProgressManager) StartNewIP(ip string) {
 	if pm.disabled {
 		return
 	}
+	pm.ipMutex.Lock()
+	pm.currentIP = ip
+	pm.ipMutex.Unlock()
+
 	pm.portMutex.Lock()
 	defer pm.portMutex.Unlock()
-	pm.currentIP = ip
+
 	if pm.portBar != nil {
-		pm.portBar.SetTotal(0, false)
+		pm.portBar.SetCurrent(0)
 		pm.portBar.SetTotal(pm.totalPorts, false)
 	}
-	pm.portCount = 0 // Reset port counter for text fallback
+	pm.portCount = 0
 }
 
 // Wait waits for all progress bars to complete their rendering
@@ -157,15 +166,29 @@ func (pm *ProgressManager) Wait() {
 	if pm.disabled {
 		return
 	}
-	// Abort the bars to make them complete immediately
 	if pm.ipBar != nil {
-		pm.ipBar.Abort(true)
+		pm.ipBar.SetTotal(pm.totalIPs, true)
 	}
 	if pm.portBar != nil {
 		pm.portBar.Abort(true)
+		done := make(chan struct{})
+		go func() {
+			pm.portBar.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(200 * time.Millisecond):
+		}
 	}
 	if pm.progress != nil {
-		pm.progress.Wait()
+		pm.progress.Shutdown()
+	}
+	if pm.shutdownCh != nil {
+		select {
+		case <-pm.shutdownCh:
+		case <-time.After(200 * time.Millisecond):
+		}
 	}
 }
 
@@ -176,11 +199,31 @@ func (pm *ProgressManager) Finish() {
 	}
 	// Print newline if using text fallback
 	if pm.progress == nil || pm.ipBar == nil {
-		fmt.Println() // Move to next line after progress text
+		fmt.Fprintln(pm.out) // Move to next line after progress text
 		return
 	}
-	// Abort the bars to make them complete immediately
-	pm.ipBar.Abort(true)
-	pm.portBar.Abort(true)
-	pm.progress.Wait()
+	// Complete the bars
+	pm.ipBar.SetTotal(pm.totalIPs, true)
+	if pm.portBar != nil {
+		pm.portBar.Abort(true)
+		done := make(chan struct{})
+		go func() {
+			pm.portBar.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
+	pm.progress.Shutdown()
+	if pm.shutdownCh != nil {
+		select {
+		case <-pm.shutdownCh:
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
+	// Print newlines to separate progress bars from subsequent output
+	fmt.Fprintln(pm.out)
+	fmt.Fprintln(pm.out)
 }

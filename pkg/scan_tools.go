@@ -21,8 +21,8 @@ import (
 )
 
 type ScanTools struct {
-	threads        int                    // 同时扫描的并发数
-	timeOut        time.Duration          // 超时时间
+	threads         int                    // 同时扫描的并发数
+	timeOut         time.Duration          // 超时时间
 	resourceLimiter *utils.ResourceLimiter // 资源限制器
 }
 
@@ -64,19 +64,6 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 	connGuard := utils.NewConnectionGuard(s.resourceLimiter)
 
 	p, err := ants.NewPoolWithFunc(s.threads, func(inData interface{}) {
-		// 添加panic恢复机制，防止单个goroutine的panic影响整个程序
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("Recovered from panic in goroutine: %v", r)
-				// Update progress even on panic
-				deliveryInfo := inData.(DeliveryInfo)
-				if deliveryInfo.ProgressManager != nil {
-					portInt, _ := strconv.Atoi(deliveryInfo.Port)
-					deliveryInfo.ProgressManager.IncrementPort(portInt)
-				}
-			}
-		}()
-
 		deliveryInfo := inData.(DeliveryInfo)
 		startTime := time.Now()
 		checkResult := CheckResult{
@@ -87,46 +74,23 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 			Timestamp:    startTime,
 		}
 
-		// 获取连接许可，带超时控制
-		ctx, cancel := context.WithTimeout(context.Background(), s.timeOut)
-		defer cancel()
-
-		releaseConn, err := connGuard.Acquire(ctx)
-		if err != nil {
-			checkResult.ResponseTime = time.Since(startTime)
-			checkResult.ErrorMessage = fmt.Sprintf("Connection denied: %v", err)
-			log.Printf("Failed to acquire connection for %s:%s: %v", deliveryInfo.Host, deliveryInfo.Port, err)
-			checkResult.Success = false
-			// 即使获取连接失败也要确保WaitGroup被正确处理
-			defer func() {
-				// Update port progress even on connection failure
-				if deliveryInfo.ProgressManager != nil {
-					portInt, _ := strconv.Atoi(deliveryInfo.Port)
-					deliveryInfo.ProgressManager.IncrementPort(portInt)
-				}
-				if showProgressStep {
-					log.Printf("%s %s:%s %v (connection denied)", protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success)
-				}
-				select {
-				case deliveryInfo.CheckResultChan <- checkResult:
-				default:
-					log.Printf("Warning: result channel is full, dropping result for %s:%s", deliveryInfo.Host, deliveryInfo.Port)
-				}
-				deliveryInfo.Wg.Done()
-			}()
-			return
-		}
-
-		// 确保释放连接
-		defer releaseConn()
+		portInt, _ := strconv.Atoi(deliveryInfo.Port)
+		var releaseConn func()
+		acquiredConn := false
 
 		defer func() {
+			if r := recover(); r != nil {
+				checkResult.ErrorMessage = fmt.Sprintf("panic: %v", r)
+			}
 			// 计算响应时间并记录结果
 			checkResult.ResponseTime = time.Since(startTime)
 
+			if acquiredConn && releaseConn != nil {
+				releaseConn()
+			}
+
 			// Update port progress
 			if deliveryInfo.ProgressManager != nil {
-				portInt, _ := strconv.Atoi(deliveryInfo.Port)
 				deliveryInfo.ProgressManager.IncrementPort(portInt)
 			}
 
@@ -142,6 +106,19 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 			}
 			deliveryInfo.Wg.Done() // 确保在所有情况下都调用Done()，防止goroutine泄漏
 		}()
+
+		// 获取连接许可，带超时控制
+		ctx, cancel := context.WithTimeout(context.Background(), s.timeOut)
+		defer cancel()
+
+		releaseConn, err := connGuard.Acquire(ctx)
+		if err != nil {
+			checkResult.ErrorMessage = fmt.Sprintf("Connection denied: %v", err)
+			log.Printf("Failed to acquire connection for %s:%s: %v", deliveryInfo.Host, deliveryInfo.Port, err)
+			checkResult.Success = false
+			return
+		}
+		acquiredConn = true
 
 		switch protocolType {
 		case RDP:
@@ -234,9 +211,6 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 	// --------------------------------------------------
 	// 开始扫描
 	checkResultChan := make(chan CheckResult, s.threads)
-	defer close(checkResultChan)
-	exitRevResultChan := make(chan bool, 1)
-	defer close(exitRevResultChan)
 	// --------------------------------------------------
 	// 使用管道去接收
 	// Host -- {"10, 20"}
@@ -249,29 +223,26 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 
 	// 互斥锁保护map操作
 	var resultMapMutex sync.RWMutex
+	revDone := make(chan struct{})
 	go func() {
-		for {
-			select {
-			case revCheckResult := <-checkResultChan:
-				// 使用写锁保护map操作，防止并发写入时的竞态条件
-				resultMapMutex.Lock()
-				if revCheckResult.Success == false {
-					if _, ok := outputInfo.FailedMapString[revCheckResult.Host]; ok {
-						outputInfo.FailedMapString[revCheckResult.Host] = append(outputInfo.FailedMapString[revCheckResult.Host], revCheckResult.Port)
-					} else {
-						outputInfo.FailedMapString[revCheckResult.Host] = []string{revCheckResult.Port}
-					}
+		defer close(revDone)
+		for revCheckResult := range checkResultChan {
+			// 使用写锁保护map操作，防止并发写入时的竞态条件
+			resultMapMutex.Lock()
+			if revCheckResult.Success == false {
+				if _, ok := outputInfo.FailedMapString[revCheckResult.Host]; ok {
+					outputInfo.FailedMapString[revCheckResult.Host] = append(outputInfo.FailedMapString[revCheckResult.Host], revCheckResult.Port)
 				} else {
-					if _, ok := outputInfo.SuccessMapString[revCheckResult.Host]; ok {
-						outputInfo.SuccessMapString[revCheckResult.Host] = append(outputInfo.SuccessMapString[revCheckResult.Host], revCheckResult.Port)
-					} else {
-						outputInfo.SuccessMapString[revCheckResult.Host] = []string{revCheckResult.Port}
-					}
+					outputInfo.FailedMapString[revCheckResult.Host] = []string{revCheckResult.Port}
 				}
-				resultMapMutex.Unlock()
-			case <-exitRevResultChan:
-				return
+			} else {
+				if _, ok := outputInfo.SuccessMapString[revCheckResult.Host]; ok {
+					outputInfo.SuccessMapString[revCheckResult.Host] = append(outputInfo.SuccessMapString[revCheckResult.Host], revCheckResult.Port)
+				} else {
+					outputInfo.SuccessMapString[revCheckResult.Host] = []string{revCheckResult.Port}
+				}
 			}
+			resultMapMutex.Unlock()
 		}
 	}()
 	// --------------------------------------------------
@@ -347,7 +318,8 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 		}
 	}
 	wg.Wait()
-	exitRevResultChan <- true
+	close(checkResultChan)
+	<-revDone
 
 	// 记录资源使用统计
 	stats := s.resourceLimiter.GetStats()
@@ -396,19 +368,6 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 	connGuard := utils.NewConnectionGuard(s.resourceLimiter)
 
 	p, err := ants.NewPoolWithFunc(s.threads, func(inData interface{}) {
-		// 添加panic恢复机制，防止单个goroutine的panic影响整个程序
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("Recovered from panic in goroutine: %v", r)
-				// Update progress even on panic
-				deliveryInfo := inData.(DeliveryInfo)
-				if deliveryInfo.ProgressManager != nil {
-					portInt, _ := strconv.Atoi(deliveryInfo.Port)
-					deliveryInfo.ProgressManager.IncrementPort(portInt)
-				}
-			}
-		}()
-
 		deliveryInfo := inData.(DeliveryInfo)
 		startTime := time.Now()
 		checkResult := CheckResult{
@@ -419,46 +378,23 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 			Timestamp:    startTime,
 		}
 
-		// 获取连接许可，带超时控制
-		ctx, cancel := context.WithTimeout(context.Background(), s.timeOut)
-		defer cancel()
-
-		releaseConn, err := connGuard.Acquire(ctx)
-		if err != nil {
-			checkResult.ResponseTime = time.Since(startTime)
-			checkResult.ErrorMessage = fmt.Sprintf("Connection denied: %v", err)
-			log.Printf("Failed to acquire connection for %s:%s: %v", deliveryInfo.Host, deliveryInfo.Port, err)
-			checkResult.Success = false
-			// 即使获取连接失败也要确保WaitGroup被正确处理
-			defer func() {
-				// Update port progress even on connection failure
-				if deliveryInfo.ProgressManager != nil {
-					portInt, _ := strconv.Atoi(deliveryInfo.Port)
-					deliveryInfo.ProgressManager.IncrementPort(portInt)
-				}
-				if showProgressStep {
-					log.Printf("%s %s:%s %v (connection denied)", protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success)
-				}
-				select {
-				case deliveryInfo.CheckResultChan <- checkResult:
-				default:
-					log.Printf("Warning: result channel is full, dropping result for %s:%s", deliveryInfo.Host, deliveryInfo.Port)
-				}
-				deliveryInfo.Wg.Done()
-			}()
-			return
-		}
-
-		// 确保释放连接
-		defer releaseConn()
+		portInt, _ := strconv.Atoi(deliveryInfo.Port)
+		var releaseConn func()
+		acquiredConn := false
 
 		defer func() {
+			if r := recover(); r != nil {
+				checkResult.ErrorMessage = fmt.Sprintf("panic: %v", r)
+			}
 			// 计算响应时间并记录结果
 			checkResult.ResponseTime = time.Since(startTime)
 
+			if acquiredConn && releaseConn != nil {
+				releaseConn()
+			}
+
 			// Update port progress
 			if deliveryInfo.ProgressManager != nil {
-				portInt, _ := strconv.Atoi(deliveryInfo.Port)
 				deliveryInfo.ProgressManager.IncrementPort(portInt)
 			}
 
@@ -474,6 +410,19 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 			}
 			deliveryInfo.Wg.Done() // 确保在所有情况下都调用Done()，防止goroutine泄漏
 		}()
+
+		// 获取连接许可，带超时控制
+		ctx, cancel := context.WithTimeout(context.Background(), s.timeOut)
+		defer cancel()
+
+		releaseConn, err := connGuard.Acquire(ctx)
+		if err != nil {
+			checkResult.ErrorMessage = fmt.Sprintf("Connection denied: %v", err)
+			log.Printf("Failed to acquire connection for %s:%s: %v", deliveryInfo.Host, deliveryInfo.Port, err)
+			checkResult.Success = false
+			return
+		}
+		acquiredConn = true
 
 		switch protocolType {
 		case RDP:
@@ -614,9 +563,6 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 
 	// 开始扫描
 	checkResultChan := make(chan CheckResult, s.threads)
-	defer close(checkResultChan)
-	exitRevResultChan := make(chan bool, 1)
-	defer close(exitRevResultChan)
 
 	// 使用管道去接收
 	// Host -- {"10, 20"}
@@ -629,40 +575,34 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 
 	// 互斥锁保护map操作
 	var resultMapMutex sync.RWMutex
+	revDone := make(chan struct{})
 	go func() {
-		for {
-			select {
-			case revCheckResult := <-checkResultChan:
-				// 使用写锁保护map操作，防止并发写入时的竞态条件
-				resultMapMutex.Lock()
+		defer close(revDone)
+		for revCheckResult := range checkResultChan {
+			// 使用写锁保护map操作，防止并发写入时的竞态条件
+			resultMapMutex.Lock()
 
-				// Parse port as int for ScanContext
-				portInt := 0
-				if p, err := strconv.Atoi(revCheckResult.Port); err == nil {
-					portInt = p
-				}
-
-				if revCheckResult.Success == false {
-					if _, ok := outputInfo.FailedMapString[revCheckResult.Host]; ok {
-						outputInfo.FailedMapString[revCheckResult.Host] = append(outputInfo.FailedMapString[revCheckResult.Host], revCheckResult.Port)
-					} else {
-						outputInfo.FailedMapString[revCheckResult.Host] = []string{revCheckResult.Port}
-					}
-					// Update ScanContext with failed result
-					scanContext.MarkFailed(revCheckResult.Host, portInt)
-				} else {
-					if _, ok := outputInfo.SuccessMapString[revCheckResult.Host]; ok {
-						outputInfo.SuccessMapString[revCheckResult.Host] = append(outputInfo.SuccessMapString[revCheckResult.Host], revCheckResult.Port)
-					} else {
-						outputInfo.SuccessMapString[revCheckResult.Host] = []string{revCheckResult.Port}
-					}
-					// Update ScanContext with successful result
-					scanContext.MarkCompleted(revCheckResult.Host, portInt, revCheckResult.ResponseTime)
-				}
-				resultMapMutex.Unlock()
-			case <-exitRevResultChan:
-				return
+			portInt := 0
+			if p, err := strconv.Atoi(revCheckResult.Port); err == nil {
+				portInt = p
 			}
+
+			if revCheckResult.Success == false {
+				if _, ok := outputInfo.FailedMapString[revCheckResult.Host]; ok {
+					outputInfo.FailedMapString[revCheckResult.Host] = append(outputInfo.FailedMapString[revCheckResult.Host], revCheckResult.Port)
+				} else {
+					outputInfo.FailedMapString[revCheckResult.Host] = []string{revCheckResult.Port}
+				}
+				scanContext.MarkFailed(revCheckResult.Host, portInt)
+			} else {
+				if _, ok := outputInfo.SuccessMapString[revCheckResult.Host]; ok {
+					outputInfo.SuccessMapString[revCheckResult.Host] = append(outputInfo.SuccessMapString[revCheckResult.Host], revCheckResult.Port)
+				} else {
+					outputInfo.SuccessMapString[revCheckResult.Host] = []string{revCheckResult.Port}
+				}
+				scanContext.MarkCompleted(revCheckResult.Host, portInt, revCheckResult.ResponseTime)
+			}
+			resultMapMutex.Unlock()
 		}
 	}()
 
@@ -670,6 +610,7 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 	progressTicker := time.NewTicker(10 * time.Second)
 	defer progressTicker.Stop()
 
+	stopProgress := make(chan struct{})
 	go func() {
 		for {
 			select {
@@ -680,11 +621,17 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 						scanContext.ScanID, stats.ProgressPercent, stats.ScannedTargets, stats.TotalTargets,
 						stats.SuccessCount, stats.FailureCount, stats.ScanDuration)
 				}
-			case <-exitRevResultChan:
+			case <-stopProgress:
 				return
 			}
 		}
 	}()
+
+	cleanup := func() {
+		close(stopProgress)
+		close(checkResultChan)
+		<-revDone
+	}
 
 	// Execute scan tasks
 	for _, ipRangeInfo := range ipRangeInfos {
@@ -694,6 +641,7 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 				if progressManager != nil {
 					progressManager.StartNewIP(ip)
 				}
+				var invokeErr error
 				for _, port := range ports {
 					// 创建deliveryInfo
 					deliveryInfo := DeliveryInfo{
@@ -717,17 +665,22 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 						// 如果Invoke失败，我们需要确保goroutine不会启动
 						// 所以在这里减少计数器并返回错误
 						wg.Done()
-						return errors.NewResourceLimitError("failed to invoke scan task", err)
+						invokeErr = errors.NewResourceLimitError("failed to invoke scan task", err)
+						break
 					}
+				}
+				wg.Wait()
+				if invokeErr != nil {
+					return invokeErr
+				}
+				if progressManager != nil {
+					progressManager.IncrementIP(ip)
 				}
 				return nil
 			})
 			if err != nil {
+				cleanup()
 				return nil, nil, fmt.Errorf("scan - ForEachIP error: %w", err)
-			}
-
-			if progressManager != nil {
-				progressManager.IncrementIP("completed")
 			}
 		} else {
 			// 使用内置的段规则去遍历
@@ -737,9 +690,11 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 					startIP.To4()[3] += uint8(1)
 				}
 
+				ipStr := startIP.String()
 				if progressManager != nil {
-					progressManager.StartNewIP(startIP.String())
+					progressManager.StartNewIP(ipStr)
 				}
+				var invokeErr error
 				for _, port := range ports {
 					// 创建deliveryInfo
 					deliveryInfo := DeliveryInfo{
@@ -763,19 +718,25 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 						// 如果Invoke失败，我们需要确保goroutine不会启动
 						// 所以在这里减少计数器并返回错误
 						wg.Done()
-						return nil, nil, errors.NewResourceLimitError("failed to invoke scan task", err)
+						invokeErr = errors.NewResourceLimitError("failed to invoke scan task", err)
+						break
 					}
 				}
 
+				wg.Wait()
+				if invokeErr != nil {
+					cleanup()
+					return nil, nil, invokeErr
+				}
 				if progressManager != nil {
-					progressManager.IncrementIP(startIP.String())
+					progressManager.IncrementIP(ipStr)
 				}
 			}
 		}
 	}
 
 	wg.Wait()
-	exitRevResultChan <- true
+	cleanup()
 
 	// Final progress update
 	finalStats := scanContext.GetStats()
