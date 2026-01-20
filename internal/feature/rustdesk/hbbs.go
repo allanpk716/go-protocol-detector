@@ -15,7 +15,6 @@ import (
 type HBBSHelper struct {
 	SenderPackage    []byte
 	ReceiverFeatures []common.ReceiverFeature
-	version          string
 }
 
 func NewHBBSHelper() *HBBSHelper {
@@ -57,7 +56,7 @@ func NewHBBSHelper() *HBBSHelper {
 	// For port 21116: port_varint = 0xB4 0xA5 0x01
 	// For port 21117: port_varint = 0xB5 0xA5 0x01
 	// Response bytes: [len][0xAA 0x04 0x08 0xBx 0xA5 0x01]
-	hbbs := &HBBSHelper{
+	return &HBBSHelper{
 		SenderPackage: result,
 		ReceiverFeatures: []common.ReceiverFeature{
 			{
@@ -71,11 +70,5 @@ func NewHBBSHelper() *HBBSHelper {
 				FeatureBytes: []byte{0x08},
 			},
 		},
-		version: "v0.2",
 	}
-	return hbbs
-}
-
-func (h HBBSHelper) GetVersion() string {
-	return h.version
 }
