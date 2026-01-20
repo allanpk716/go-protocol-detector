@@ -39,18 +39,17 @@ func NewResourceLimiter(maxConnections, maxMemoryMB int) *ResourceLimiter {
 
 // AcquireConnection 获取连接许可
 func (rl *ResourceLimiter) AcquireConnection(ctx context.Context) error {
-	rl.mu.Lock()
-	rl.connectionCounter++
-	rl.mu.Unlock()
-
 	// 检查是否超过最大连接数
 	select {
 	case rl.connLimiter <- struct{}{}:
+		// 只在成功获取许可后才递增计数器
 		rl.mu.Lock()
+		rl.connectionCounter++
 		rl.currentConnections++
 		rl.mu.Unlock()
 		return nil
 	case <-ctx.Done():
+		// 超时时不递增计数器
 		return fmt.Errorf("connection acquisition timeout: %w", ctx.Err())
 	}
 }
