@@ -10,20 +10,7 @@ import (
 	"time"
 )
 
-var (
-	protocol string
-	host     string
-	port     string
-	thread   int
-	timeOut  int
-
-	user           string
-	password       string
-	priKeyFullPath string
-	csvOutput      string
-)
-
-var AppVersion = "unknow"
+var AppVersion = "unknown"
 
 func main() {
 	app := &cli.App{
@@ -33,56 +20,47 @@ func main() {
 		Version:     AppVersion,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "protocol",
-				Usage:       "select only one protocol: common | ftp | rdp | rustdesk-hbbs | rustdesk-hbbr | rustdesk-hbbs-21116 | sftp | ssh | telnet | vnc",
-				Value:       "common",
-				Destination: &protocol,
+				Name:  "protocol",
+				Usage: "select only one protocol: common | ftp | rdp | rustdesk-hbbs | rustdesk-hbbr | rustdesk-hbbs-21116 | sftp | ssh | telnet | vnc",
+				Value: "common",
 			},
 			&cli.StringFlag{
-				Name:        "host",
-				Usage:       "support 3 diffs types: 192.168.1.1,192.168.1.100-254,192.168.1.0/24",
-				Destination: &host,
+				Name:  "host",
+				Usage: "support 3 diffs types: 192.168.1.1,192.168.1.100-254,192.168.1.0/24",
 			},
 			&cli.StringFlag{
-				Name:        "port",
-				Usage:       "support like: 22,80,443,3380-3390",
-				Destination: &port,
+				Name:  "port",
+				Usage: "support like: 22,80,443,3380-3390",
 			},
 			&cli.IntFlag{
-				Name:        "thread",
-				Usage:       "10",
-				Value:       10,
-				Destination: &thread,
+				Name:  "thread",
+				Usage: "10",
+				Value: 10,
 			},
 			&cli.IntFlag{
-				Name:        "timeout",
-				Usage:       "1000 ms",
-				Value:       1000,
-				Destination: &timeOut,
+				Name:  "timeout",
+				Usage: "1000 ms",
+				Value: 1000,
 			},
 			&cli.StringFlag{
-				Name:        "user",
-				Usage:       "if you scan sftp, need give a UserName: root",
-				Value:       "root",
-				Destination: &user,
+				Name:  "user",
+				Usage: "if you scan sftp, need give a UserName: root",
+				Value: "root",
 			},
 			&cli.StringFlag{
-				Name:        "password",
-				Usage:       "if you scan sftp, need give a Password: root",
-				Value:       "root",
-				Destination: &password,
+				Name:  "password",
+				Usage: "if you scan sftp, need give a Password: root",
+				Value: "root",
 			},
 			&cli.StringFlag{
-				Name:        "prikey",
-				Usage:       "if you scan sftp, need give a pri key Full Path( user name or this priKeyFPath only chose one): ~/.ssh/id_rsa",
-				Value:       "~/.ssh/id_rsa",
-				Destination: &priKeyFullPath,
+				Name:  "prikey",
+				Usage: "if you scan sftp, need give a pri key Full Path( user name or this priKeyFPath only chose one): ~/.ssh/id_rsa",
+				Value: "~/.ssh/id_rsa",
 			},
 			&cli.StringFlag{
-				Name:        "csv-output",
-				Usage:       "output scan results to CSV file (specify file path to enable CSV output)",
-				Value:       "",
-				Destination: &csvOutput,
+				Name:  "csv-output",
+				Usage: "output scan results to CSV file (specify file path to enable CSV output)",
+				Value: "",
 			},
 			&cli.BoolFlag{
 				Name:    "no-progress",
@@ -97,6 +75,18 @@ func main() {
 				cli.ShowAppHelp(c)
 				return nil
 			}
+
+			// 直接从 context 获取参数
+			protocol := c.String("protocol")
+			host := c.String("host")
+			port := c.String("port")
+			thread := c.Int("thread")
+			timeOut := c.Int("timeout")
+			user := c.String("user")
+			password := c.String("password")
+			priKeyFullPath := c.String("prikey")
+			csvOutput := c.String("csv-output")
+			noProgress := c.Bool("no-progress")
 
 			nowProtocol := pkg.String2ProtocolType(protocol)
 			scanTools := pkg.NewScanTools(thread, time.Duration(timeOut)*time.Millisecond)
@@ -113,7 +103,7 @@ func main() {
 				User:               user,
 				Password:           password,
 				PrivateKeyFullPath: priKeyFullPath,
-			}, false, csvOutput, !c.Bool("no-progress"))
+			}, false, csvOutput, !noProgress)
 
 			if err != nil {
 				return err
