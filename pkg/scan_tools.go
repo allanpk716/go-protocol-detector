@@ -856,6 +856,13 @@ func (s ScanTools) parseHost(inputHostString string) ([]IPRangeInfo, error) {
 					return nil, fmt.Errorf("scan - InputInfo Host range size (%d) exceeds maximum allowed (%d)", rangeSize, maxRangeSize)
 				}
 
+				// 显式的 IP 字节溢出检查
+				// 确保 baseIP[3] + rangeSize - 1 不会超过 255（uint8 的最大值）
+				// 虽然 endIndex <= 255 已覆盖此情况，但显式检查使代码意图更明确
+				if startIndex+rangeSize-1 > 255 {
+					return nil, fmt.Errorf("scan - InputInfo Host range would cause octet overflow: %s (start=%d, size=%d, max=255)", oneHostString, startIndex, rangeSize)
+				}
+
 				ipRangeInfo.Begin = address
 				ipRangeInfo.CountNextTime = rangeSize
 			}
