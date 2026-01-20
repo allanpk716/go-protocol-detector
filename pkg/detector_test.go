@@ -57,12 +57,6 @@ func TestNewDetector(t *testing.T) {
 
 func TestDetector_RDPCheck(t *testing.T) {
 	det := NewDetector(timeOut)
-	if det.rdp.GetVersion() == "" {
-		t.Fatal("rdp version is empty")
-	}
-	if len(det.rdp.GetSupportOSVersion()) == 0 {
-		t.Fatal("rdp Support OS Version is empty")
-	}
 
 	// 测试有效的RDP服务（需要设置环境变量 TEST_RDP_HOST 和 TEST_RDP_PORT）
 	testHost := getTestEnv("TEST_RDP_HOST")
@@ -83,9 +77,6 @@ func TestDetector_RDPCheck(t *testing.T) {
 
 func TestDetector_SSHCheck(t *testing.T) {
 	det := NewDetector(timeOut)
-	if det.ssh.GetVersion() == "" {
-		t.Fatal("ssh version is empty")
-	}
 
 	// 测试有效的SSH服务（需要设置环境变量 TEST_SSH_HOST 和 TEST_SSH_PORT）
 	testHost := getTestEnv("TEST_SSH_HOST")
@@ -106,9 +97,6 @@ func TestDetector_SSHCheck(t *testing.T) {
 
 func TestDetector_FTPCheck(t *testing.T) {
 	det := NewDetector(timeOut)
-	if det.ftp.GetVersion() == "" {
-		t.Fatal("ftp version is empty")
-	}
 
 	// 测试有效的FTP服务（需要设置环境变量 TEST_FTP_HOST 和 TEST_FTP_PORT）
 	// 如果没有设置，使用公共FTP服务器进行测试

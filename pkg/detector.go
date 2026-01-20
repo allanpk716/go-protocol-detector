@@ -16,6 +16,13 @@ import (
 	"time"
 )
 
+const (
+	// MaxReadSize 是从网络读取的最大字节数
+	MaxReadSize = 4096
+	// ReadTimeout 是网络读取的超时时间
+	ReadTimeout = 5 * time.Second
+)
+
 type Detector struct {
 	rdp               *rdp.RDPHelper
 	ssh               *ssh.SSHHelper
@@ -165,8 +172,7 @@ func (d Detector) commonCheck(host string, port string,
 	readBytesLen := lastFeature.StartIndex + len(lastFeature.FeatureBytes)
 
 	// 添加网络读取安全限制
-	maxReadSize := 4096 // 最大读取4KB
-	if readBytesLen > maxReadSize {
+	if readBytesLen > MaxReadSize {
 		return outErr
 	}
 	if readBytesLen <= 0 {
@@ -176,7 +182,7 @@ func (d Detector) commonCheck(host string, port string,
 	var readBuf = make([]byte, readBytesLen)
 
 	// 设置读取超时，防止阻塞
-	err = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	err = conn.SetReadDeadline(time.Now().Add(ReadTimeout))
 	if err != nil {
 		return outErr
 	}
