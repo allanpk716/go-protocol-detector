@@ -233,8 +233,8 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 		ProtocolType: protocolType,
 	}
 	wg := &sync.WaitGroup{}
-	outputInfo.SuccessMapString = make(map[string][]string, 0)
-	outputInfo.FailedMapString = make(map[string][]string, 0)
+	outputInfo.SuccessMapString = make(map[string][]string, 100)
+	outputInfo.FailedMapString = make(map[string][]string, 100)
 
 	// 互斥锁保护map操作
 	var resultMapMutex sync.RWMutex
@@ -608,8 +608,8 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 		ProtocolType: protocolType,
 	}
 	wg := &sync.WaitGroup{}
-	outputInfo.SuccessMapString = make(map[string][]string, 0)
-	outputInfo.FailedMapString = make(map[string][]string, 0)
+	outputInfo.SuccessMapString = make(map[string][]string, 100)
+	outputInfo.FailedMapString = make(map[string][]string, 100)
 
 	// 互斥锁保护map操作
 	var resultMapMutex sync.RWMutex
