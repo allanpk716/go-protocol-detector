@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -38,12 +39,17 @@ type ScanContext struct {
 
 	// Thread safety
 	mutex sync.RWMutex
+
+	// Context for cancellation
+	Ctx    context.Context
+	Cancel context.CancelFunc
 }
 
 // NewScanContext creates a new scan context with the given parameters
 func NewScanContext(protocol ProtocolType, hostRange, portRange string, threads, timeout int) *ScanContext {
 	now := time.Now()
 	scanID := fmt.Sprintf("scan_%d", now.Unix())
+	ctx, cancel := context.WithCancel(context.Background())
 
 	return &ScanContext{
 		ScanID:          scanID,
@@ -58,6 +64,8 @@ func NewScanContext(protocol ProtocolType, hostRange, portRange string, threads,
 		failedTargets:    make(map[string]bool),
 		pendingTargets:   make([]string, 0),
 		MinResponseTime:  time.Hour, // Initialize to a large value
+		Ctx:             ctx,
+		Cancel:          cancel,
 	}
 }
 

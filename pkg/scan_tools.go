@@ -65,6 +65,18 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 
 	p, err := ants.NewPoolWithFunc(s.threads, func(inData interface{}) {
 		deliveryInfo := inData.(DeliveryInfo)
+
+		// Check if scan has been cancelled
+		if deliveryInfo.ScanContext != nil {
+			select {
+			case <-deliveryInfo.ScanContext.Ctx.Done():
+				// Scan cancelled, return early
+				deliveryInfo.Wg.Done()
+				return
+			default:
+			}
+		}
+
 		startTime := time.Now()
 		checkResult := CheckResult{
 			Success:      false,
@@ -352,7 +364,12 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 
 		go func() {
 			<-sigChan
-			log.Printf("Received interrupt signal, saving scan state...")
+			log.Printf("Received interrupt signal, shutting down gracefully...")
+
+			// Cancel scan context to signal all goroutines to stop
+			if scanContext.Cancel != nil {
+				scanContext.Cancel()
+			}
 
 			// Save state before exit
 			if resumeManager != nil && csvOutputPath != "" {
@@ -363,7 +380,8 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 				}
 			}
 
-			os.Exit(0)
+			// Note: Not using os.Exit(0) to allow defer statements to execute
+			// The scan will naturally exit after all goroutines complete
 		}()
 	}
 
@@ -374,6 +392,18 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 
 	p, err := ants.NewPoolWithFunc(s.threads, func(inData interface{}) {
 		deliveryInfo := inData.(DeliveryInfo)
+
+		// Check if scan has been cancelled
+		if deliveryInfo.ScanContext != nil {
+			select {
+			case <-deliveryInfo.ScanContext.Ctx.Done():
+				// Scan cancelled, return early
+				deliveryInfo.Wg.Done()
+				return
+			default:
+			}
+		}
+
 		startTime := time.Now()
 		checkResult := CheckResult{
 			Success:      false,
@@ -662,6 +692,7 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 						CheckResultChan:    checkResultChan,
 						Wg:                 wg,
 						ProgressManager:    progressManager,
+						ScanContext:        scanContext,
 					}
 
 					// 先增加WaitGroup计数器
@@ -1001,6 +1032,7 @@ type DeliveryInfo struct {
 	CheckResultChan    chan CheckResult
 	Wg                 *sync.WaitGroup
 	ProgressManager    *ProgressManager // Added for progress tracking
+	ScanContext        *ScanContext    // Added for cancellation support
 }
 
 type CheckResult struct {
