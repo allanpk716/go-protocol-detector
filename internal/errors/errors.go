@@ -1,8 +1,10 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"net"
+	"strings"
 )
 
 // ErrorType 错误类型
@@ -141,13 +143,23 @@ func isNetTimeoutError(err error) bool {
 		return false
 	}
 
+	// 优先使用类型断言
 	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 		return true
 	}
 
-	// 检查常见的超时错误消息
+	// 检查包装的错误
+	if unwrapped := errors.Unwrap(err); unwrapped != nil {
+		if netErr, ok := unwrapped.(net.Error); ok && netErr.Timeout() {
+			return true
+		}
+	}
+
+	// 字符串匹配仅作为最后的后备手段
 	errMsg := err.Error()
-	return contains(errMsg, "timeout", "deadline", "timed out")
+	return strings.Contains(errMsg, "timeout") ||
+		strings.Contains(errMsg, "deadline") ||
+		strings.Contains(errMsg, "timed out")
 }
 
 // isNetError 检查是否为网络错误
@@ -156,25 +168,26 @@ func isNetError(err error) bool {
 		return false
 	}
 
+	// 优先使用类型断言
 	if _, ok := err.(net.Error); ok {
 		return true
 	}
 
-	// 检查常见的网络错误消息
-	errMsg := err.Error()
-	return contains(errMsg, "connection", "network", "dial", "refused", "unreachable")
-}
-
-// contains 检查字符串是否包含任意给定的子串
-func contains(s string, substrings ...string) bool {
-	for _, substr := range substrings {
-		if len(s) >= len(substr) {
-			for i := 0; i <= len(s)-len(substr); i++ {
-				if s[i:i+len(substr)] == substr {
-					return true
-				}
-			}
+	// 检查包装的错误
+	if unwrapped := errors.Unwrap(err); unwrapped != nil {
+		if _, ok := unwrapped.(net.Error); ok {
+			return true
 		}
 	}
-	return false
+
+	// 字符串匹配仅作为后备
+	errMsg := err.Error()
+	return strings.Contains(errMsg, "connection") ||
+		strings.Contains(errMsg, "network") ||
+		strings.Contains(errMsg, "dial") ||
+		strings.Contains(errMsg, "refused") ||
+		strings.Contains(errMsg, "unreachable")
 }
+
+// 移除手动的 contains 函数，使用 strings.Contains 替代
+// 此函数已不再需要，因为改用了标准库的 strings.Contains
