@@ -120,17 +120,17 @@ func main() {
 			}
 
 			log.Println("==========================================================")
-			info := protocol + " Scan Result: \r\n"
+			info := protocol + " Scan Result: \n"
 
 			// Show console output
 			if outputInfo != nil {
 				for s2, i := range outputInfo.SuccessMapString {
-					info += s2 + ":" + strings.Join(i, ",") + "\r\n"
+					info += s2 + ":" + strings.Join(i, ",") + "\n"
 				}
 			}
 
 			if csvOutput != "" {
-				info += fmt.Sprintf("CSV results saved to: %s\r\n", csvOutput)
+				info += fmt.Sprintf("CSV results saved to: %s\n", csvOutput)
 			}
 
 			fmt.Print(info)

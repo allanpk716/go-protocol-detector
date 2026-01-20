@@ -98,12 +98,9 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 			if showProgressStep == true {
 				log.Printf("%s %s:%s %v (%v)", protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success, checkResult.ResponseTime)
 			}
-			// 使用select防止channel阻塞
-			select {
-			case deliveryInfo.CheckResultChan <- checkResult:
-			default:
-				log.Printf("Warning: result channel is full, dropping result for %s:%s", deliveryInfo.Host, deliveryInfo.Port)
-			}
+			// 使用阻塞发送确保结果不会丢失
+			// channel 足够大（10000+），阻塞等待不会影响性能
+			deliveryInfo.CheckResultChan <- checkResult
 			deliveryInfo.Wg.Done() // 确保在所有情况下都调用Done()，防止goroutine泄漏
 		}()
 
@@ -210,7 +207,13 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 	}
 	// --------------------------------------------------
 	// 开始扫描
-	checkResultChan := make(chan CheckResult, s.threads)
+	// 增加 channel 大小以防止结果丢失：至少支持同时处理所有可能的扫描结果
+	// 对于大范围端口扫描，使用更大的缓冲区
+	channelSize := s.threads * 100
+	if channelSize < 10000 {
+		channelSize = 10000 // 最小 10000 缓冲区
+	}
+	checkResultChan := make(chan CheckResult, channelSize)
 	// --------------------------------------------------
 	// 使用管道去接收
 	// Host -- {"10, 20"}
@@ -283,18 +286,20 @@ func (s ScanTools) Scan(protocolType ProtocolType, inputInfo InputInfo, showProg
 			}
 		} else {
 			// 使用内置的段规则去遍历
-			startIP := ipRangeInfo.Begin
+			baseIP := ipRangeInfo.Begin.To4()
 			for i := 0; i < ipRangeInfo.CountNextTime; i++ {
+				// 为每次迭代创建独立的 IP 副本
+				currentIP := make(net.IP, len(baseIP))
+				copy(currentIP, baseIP)
+				// 根据迭代次数递增最后一个字节
+				currentIP[3] += uint8(i)
 
-				if i != 0 {
-					startIP.To4()[3] += uint8(1)
-				}
 				for _, port := range ports {
 					// 创建deliveryInfo
 					deliveryInfo := DeliveryInfo{
 						Detector:           d,
 						ProtocolType:       protocolType,
-						Host:               startIP.String(),
+						Host:               currentIP.String(),
 						Port:               fmt.Sprintf("%d", port),
 						User:               inputInfo.User,
 						Password:           inputInfo.Password,
@@ -402,12 +407,9 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 			if showProgressStep == true {
 				log.Printf("%s %s:%s %v (%v)", protocolType.String(), deliveryInfo.Host, deliveryInfo.Port, checkResult.Success, checkResult.ResponseTime)
 			}
-			// 使用select防止channel阻塞
-			select {
-			case deliveryInfo.CheckResultChan <- checkResult:
-			default:
-				log.Printf("Warning: result channel is full, dropping result for %s:%s", deliveryInfo.Host, deliveryInfo.Port)
-			}
+			// 使用阻塞发送确保结果不会丢失
+			// channel 足够大（10000+），阻塞等待不会影响性能
+			deliveryInfo.CheckResultChan <- checkResult
 			deliveryInfo.Wg.Done() // 确保在所有情况下都调用Done()，防止goroutine泄漏
 		}()
 
@@ -544,13 +546,13 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 				return nil, nil, fmt.Errorf("scan - ForEachIP error: %w", err)
 			}
 		} else {
-			startIP := ipRangeInfo.Begin
+			baseIP := ipRangeInfo.Begin.To4()
 			for i := 0; i < ipRangeInfo.CountNextTime; i++ {
-				if i != 0 {
-					startIP.To4()[3] += uint8(1)
-				}
+				currentIP := make(net.IP, len(baseIP))
+				copy(currentIP, baseIP)
+				currentIP[3] += uint8(i)
 				for _, port := range ports {
-					allTargets = append(allTargets, fmt.Sprintf("%s:%d", startIP.String(), port))
+					allTargets = append(allTargets, fmt.Sprintf("%s:%d", currentIP.String(), port))
 				}
 			}
 		}
@@ -562,7 +564,13 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 	log.Printf("Starting scan %s: %d targets, %d threads", scanContext.ScanID, scanContext.TotalTargets, s.threads)
 
 	// 开始扫描
-	checkResultChan := make(chan CheckResult, s.threads)
+	// 增加 channel 大小以防止结果丢失：至少支持同时处理所有可能的扫描结果
+	// 对于大范围端口扫描，使用更大的缓冲区
+	channelSize := s.threads * 100
+	if channelSize < 10000 {
+		channelSize = 10000 // 最小 10000 缓冲区
+	}
+	checkResultChan := make(chan CheckResult, channelSize)
 
 	// 使用管道去接收
 	// Host -- {"10, 20"}
@@ -641,7 +649,6 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 				if progressManager != nil {
 					progressManager.StartNewIP(ip)
 				}
-				var invokeErr error
 				for _, port := range ports {
 					// 创建deliveryInfo
 					deliveryInfo := DeliveryInfo{
@@ -663,15 +670,10 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 					err = p.Invoke(deliveryInfo)
 					if err != nil {
 						// 如果Invoke失败，我们需要确保goroutine不会启动
-						// 所以在这里减少计数器并返回错误
+						// 所以在这里减少计数器
 						wg.Done()
-						invokeErr = errors.NewResourceLimitError("failed to invoke scan task", err)
-						break
+						return errors.NewResourceLimitError("failed to invoke scan task", err)
 					}
-				}
-				wg.Wait()
-				if invokeErr != nil {
-					return invokeErr
 				}
 				if progressManager != nil {
 					progressManager.IncrementIP(ip)
@@ -684,23 +686,24 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 			}
 		} else {
 			// 使用内置的段规则去遍历
-			startIP := ipRangeInfo.Begin
+			baseIP := ipRangeInfo.Begin.To4()
 			for i := 0; i < ipRangeInfo.CountNextTime; i++ {
-				if i != 0 {
-					startIP.To4()[3] += uint8(1)
-				}
+				// 为每次迭代创建独立的 IP 副本
+				currentIP := make(net.IP, len(baseIP))
+				copy(currentIP, baseIP)
+				// 根据迭代次数递增最后一个字节
+				currentIP[3] += uint8(i)
 
-				ipStr := startIP.String()
+				ipStr := currentIP.String()
 				if progressManager != nil {
 					progressManager.StartNewIP(ipStr)
 				}
-				var invokeErr error
 				for _, port := range ports {
 					// 创建deliveryInfo
 					deliveryInfo := DeliveryInfo{
 						Detector:           d,
 						ProtocolType:       protocolType,
-						Host:               startIP.String(),
+						Host:               currentIP.String(),
 						Port:               fmt.Sprintf("%d", port),
 						User:               inputInfo.User,
 						Password:           inputInfo.Password,
@@ -716,18 +719,13 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 					err = p.Invoke(deliveryInfo)
 					if err != nil {
 						// 如果Invoke失败，我们需要确保goroutine不会启动
-						// 所以在这里减少计数器并返回错误
+						// 所以在这里减少计数器
 						wg.Done()
-						invokeErr = errors.NewResourceLimitError("failed to invoke scan task", err)
-						break
+						cleanup()
+						return nil, nil, errors.NewResourceLimitError("failed to invoke scan task", err)
 					}
 				}
 
-				wg.Wait()
-				if invokeErr != nil {
-					cleanup()
-					return nil, nil, invokeErr
-				}
 				if progressManager != nil {
 					progressManager.IncrementIP(ipStr)
 				}
