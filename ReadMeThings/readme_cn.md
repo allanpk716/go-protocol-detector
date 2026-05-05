@@ -13,11 +13,11 @@
 
 * SFTP
 
-  > SFTP（SSH 文件传输协议）运行在 SSH 协议之上，需要完整的 SSH 协议栈支持进行检测。
+  > SFTP（SSH 文件传输协议）运行在 SSH 协议之上，采用协议分析方式进行检测。
   >
-  > 当前实现采用多层检测策略：无认证快速检测 → 常见凭据测试 → 高级检测模式。
+  > 无需认证即可检测 SSH 服务和 SFTP 子系统的可用性。
   >
-  > 由于 SSH 协议的加密特性，基于连接的检测是验证 SFTP 服务可用性的最可靠方法，数据包级别的检测因加密而不可行。
+  > 快速三层检测：TCP连接 → SSH协议识别 → SFTP子系统查询。
 
 * SSH
 
@@ -25,9 +25,37 @@
 
 * Telnet
 
+* RustDesk
+
+  > RustDesk 远程桌面软件检测。
+  >
+  > - **rustdesk-hbbs**：HBBS（信令/注册服务器）检测，端口 21116
+  > - **rustdesk-hbbr**：HBBR（中继服务器）检测，端口 21117
+  >
+  > 基于 Protobuf 协议检测，可靠识别 RustDesk 服务器。
+
 ## 如何使用
 
 看测试用例 [detector_test.go](https://github.com/allanpk716/go-protocol-detector/blob/master/detector_test.go)
+
+### 命令行使用
+
+```powershell
+# RDP 扫描
+go-protocol-detector --protocol=rdp --host=172.20.65.89-101 --port=3389
+
+# 快速 SFTP 检测（推荐，无需认证）
+go-protocol-detector --protocol=sftp --host=172.20.65.1/24 --port=22
+
+# SFTP 带认证检测（需要认证时使用）
+go-protocol-detector --protocol=sftp --host=172.20.65.1/24 --port=22 --user=root --password=123
+
+# RustDesk HBBS 信令服务器检测（端口 21116）
+go-protocol-detector --protocol=rustdesk-hbbs --host=192.168.1.1-254 --port=21116
+
+# RustDesk HBBR 中继服务器检测（端口 21117）
+go-protocol-detector --protocol=rustdesk-hbbr --host=192.168.1.1-254 --port=21117
+```
 
 ## TODO
 

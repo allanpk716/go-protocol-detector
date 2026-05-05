@@ -12,6 +12,8 @@
 
 ## Task 1: Create RustDesk HBBS Protocol Helper
 
+> **Status:** completed
+
 **Files:**
 - Create: `internal/feature/rustdesk/hbbs.go`
 - Reference: `internal/feature/ssh/ssh.go`
@@ -141,6 +143,8 @@ git commit -m "feat(rustdesk): add HBBS protocol helper with TestNatRequest"
 
 ## Task 2: Create RustDesk HBBR Protocol Helper
 
+> **Status:** completed
+
 **Files:**
 - Create: `internal/feature/rustdesk/hbbr.go`
 - Modify: `internal/feature/rustdesk/hbbr_test.go`
@@ -224,6 +228,8 @@ git commit -m "feat(rustdesk): add HBBR protocol helper for relay detection"
 ---
 
 ## Task 3: Add RustDesk Detection Methods to Detector
+
+> **Status:** completed
 
 **Files:**
 - Modify: `pkg/detector.go`
@@ -320,6 +326,8 @@ git commit -m "feat(detector): add HBBSCheck and HBBRCheck methods"
 ---
 
 ## Task 4: Add RustDesk Protocol Types
+
+> **Status:** completed
 
 **Files:**
 - Modify: `pkg/scan_tools.go` (line ~1004)
@@ -473,6 +481,8 @@ git commit -m "feat(protocol): add RustDeskHBBS and RustDeskHBBR protocol types"
 
 ## Task 5: Add Protocol Detection Switch Cases
 
+> **Status:** completed
+
 **Files:**
 - Modify: `pkg/scan_tools.go` (line ~151 in first switch, line ~468 in second switch)
 - Test: Integration test with actual scanning
@@ -577,6 +587,8 @@ git commit -m "feat(scan): add RustDesk protocol detection to scan switch"
 
 ## Task 6: Add Error Definitions
 
+> **Status:** completed
+
 **Files:**
 - Modify: `internal/custom_error/CustomError.go`
 - Test: Verify error messages
@@ -633,6 +645,8 @@ git commit -m "feat(errors): add RustDesk error definitions"
 
 ## Task 7: Update CLI with RustDesk Protocol Options
 
+> **Status:** completed
+
 **Files:**
 - Modify: `cmd/go-protocol-detector/main.go`
 - Test: Manual CLI testing
@@ -680,6 +694,8 @@ git commit -m "feat(cli): add rustdesk-hbbs and rustdesk-hbbr to protocol option
 ---
 
 ## Task 8: End-to-End Testing and Documentation
+
+> **Status:** completed
 
 **Files:**
 - Update: `CLAUDE.md` (if needed)

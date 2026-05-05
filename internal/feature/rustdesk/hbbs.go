@@ -15,6 +15,7 @@ import (
 type HBBSHelper struct {
 	SenderPackage    []byte
 	ReceiverFeatures []common.ReceiverFeature
+	version          string
 }
 
 func NewHBBSHelper() *HBBSHelper {
@@ -70,5 +71,11 @@ func NewHBBSHelper() *HBBSHelper {
 				FeatureBytes: []byte{0x08},
 			},
 		},
+		version: "v0.1",
 	}
+}
+
+// GetVersion returns the helper version
+func (h HBBSHelper) GetVersion() string {
+	return h.version
 }

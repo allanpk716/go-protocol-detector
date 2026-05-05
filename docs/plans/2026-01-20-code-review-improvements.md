@@ -17,6 +17,8 @@
 
 ### Task 1: 修复 IP 递增逻辑问题
 
+> **Status:** completed
+
 **问题描述：** 在 `scan_tools.go:289-295` 和 `690-695` 中，通过递增最后一个字节生成 IP 可能导致跨网段时产生错误的 IP 地址。
 
 **Files:**
@@ -154,6 +156,8 @@ git commit -m "fix(scan): 添加 IP 范围边界验证防止跨网段溢出"
 
 ### Task 2: 修复 ResourceLimiter 连接计数问题
 
+> **Status:** completed
+
 **问题描述：** `resource_limiter.go:41-56` 中，连接计数在通道操作前递增，超时后计数不准确。
 
 **Files:**
@@ -254,6 +258,8 @@ git commit -m "fix(utils): 修复 ResourceLimiter 超时时计数器错误递增
 ---
 
 ### Task 3: 修复信号处理中的资源泄漏
+
+> **Status:** completed
 
 **问题描述：** `scan_tools.go:352-367` 中，信号处理使用 `os.Exit(0)` 跳过所有 defer 语句。
 
@@ -401,6 +407,8 @@ git commit -m "fix(scan): 使用 context cancel 替代 os.Exit 实现优雅退�
 ---
 
 ### Task 4: 重构消除 Scan 和 ScanWithOutput 的重复代码
+
+> **Status:** completed
 
 **问题描述：** 两个方法有超过 300 行的重复代码。
 
@@ -733,6 +741,8 @@ git commit -m "refactor(scan): 提取公共逻辑到 scanCore 消除重复代码
 
 ### Task 5: ~~修复 SFTP 重复连接问题~~ (已撤回 - 设计正确)
 
+> **Status:** withdrawn
+
 **说明：** 经过代码审查，SFTP 检测中的两次连接是**必要的设计**：
 1. 第一次连接：读取 SSH Banner（使用原始 TCP 连接）
 2. 第二次连接：建立 SSH 客户端连接（需要全新连接进行握手）
@@ -864,6 +874,8 @@ git commit -m "refactor(sftp): 改进连接管理并添加性能测试"
 
 ### Task 6: 分解巨大函数
 
+> **Status:** completed
+
 **Files:**
 - Modify: `pkg/scan_tools.go`
 
@@ -872,6 +884,8 @@ git commit -m "refactor(sftp): 改进连接管理并添加性能测试"
 ---
 
 ### Task 7: 使用合理的 map 初始容量
+
+> **Status:** completed
 
 **Files:**
 - Modify: `pkg/scan_tools.go:224-225, 581-582`
@@ -904,6 +918,8 @@ git commit -m "perf(scan): 使用合理的 map 初始容量减少扩容"
 ---
 
 ### Task 8: 移除全局变量
+
+> **Status:** completed
 
 **Files:**
 - Modify: `cmd/go-protocol-detector/main.go:13-24, 94-139`
@@ -998,6 +1014,8 @@ git commit -m "refactor(main): 移除全局变量直接从 context 获取参数"
 
 ### Task 9: 移除未使用的 RateLimiter
 
+> **Status:** completed
+
 **Files:**
 - Modify: `internal/utils/resource_limiter.go:149-206`
 
@@ -1031,6 +1049,8 @@ git commit -m "chore(utils): 移除未使用的 RateLimiter 代码"
 ---
 
 ### Task 10: 改进错误处理优先使用类型断言
+
+> **Status:** completed
 
 **Files:**
 - Modify: `internal/errors/errors.go:138-180`
@@ -1114,6 +1134,8 @@ git commit -m "refactor(errors): 优先使用类型断言改进错误检测"
 
 ### Task 11: 移除未使用的字段和方法
 
+> **Status:** pending
+
 **Files:**
 - Modify: `internal/feature/ssh/ssh.go`
 - Modify: `internal/feature/rdp/rdp.go`
@@ -1154,6 +1176,8 @@ git commit -m "chore(feature): 移除未使用的 version 字段和 GetVersion �
 ---
 
 ### Task 12: 使用常量替代魔法数字
+
+> **Status:** completed
 
 **Files:**
 - Modify: `pkg/detector.go:168, 179`
@@ -1204,6 +1228,8 @@ git commit -m "refactor(detector): 使用常量替代魔法数字"
 ---
 
 ### Task 13: 修正版本号拼写错误
+
+> **Status:** completed
 
 **Files:**
 - Modify: `cmd/go-protocol-detector/main.go:26`

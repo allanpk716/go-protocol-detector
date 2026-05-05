@@ -34,6 +34,7 @@ May be refactored in future use.
   >
   > - **rustdesk-hbbs**: HBBS (Rendezvous/Signaling Server) detection on port 21116
   > - **rustdesk-hbbr**: HBBR (Relay Server) detection on port 21117
+  > - **rustdesk-hbbs-21116**: HBBS TCP hole punching service detection on port 21116 (protobuf `RegisterPk` handshake)
   >
   > Uses protobuf-based detection for reliable RustDesk server identification.
 
@@ -70,10 +71,12 @@ GLOBAL OPTIONS:
    --password value  if you scan sftp, need give a Password: root (default: "root")
    --port value      support like: 22,80,443,3380-3390 (default: "22")
    --prikey value    if you scan sftp, need give a pri key Full Path( user name or this priKeyFPath only chose one): ~/.ssh/id_rsa (default: "~/.ssh/id_rsa")
-   --protocol value  select only one protocol: common | ftp | rdp | rustdesk-hbbs | rustdesk-hbbr | sftp | ssh | telnet | vnc (default: "common")
+   --protocol value  select only one protocol: common | ftp | rdp | rustdesk-hbbs | rustdesk-hbbr | rustdesk-hbbs-21116 | sftp | ssh | telnet | vnc (default: "common")
    --thread value    10 (default: 10)
    --timeout value   1000 ms (default: 1000)
    --user value      if you scan sftp, need give a UserName: root (default: "root")
+   --csv-output value  output scan results to CSV file (specify file path to enable CSV output)
+   --no-progress, --np  disable progress bar output (default: false)
    --version, -v     print the version (default: false)
 ```
 
@@ -95,6 +98,15 @@ go-protocol-detector --protocol=rustdesk-hbbs --host=192.168.1.1-254 --port=2111
 
 # RustDesk HBBR detection (port 21117)
 go-protocol-detector --protocol=rustdesk-hbbr --host=192.168.1.1-254 --port=21117
+
+# RustDesk HBBS-21116 detection (TCP hole punching on port 21116)
+go-protocol-detector --protocol=rustdesk-hbbs-21116 --host=192.168.1.1-254 --port=21116
+
+# Output results to CSV file
+go-protocol-detector --protocol=ssh --host=192.168.1.0/24 --port=22 --csv-output=results.csv
+
+# Disable progress bar (useful in scripts)
+go-protocol-detector --protocol=rdp --host=192.168.1.1-254 --port=3389 --no-progress
 ```
 
 ## TODO

@@ -71,6 +71,8 @@ Response to verify (RegisterPkResponse):
 
 ## Task 1: Create HBBS 21116 Helper Structure
 
+> **Status:** completed
+
 **Files:**
 - Modify: `internal/feature/rustdesk/hbbs_21116.go` (create if doesn't exist)
 
@@ -189,6 +191,8 @@ git commit -m "feat(rustdesk): add HBBS 21116 helper structure with RegisterPk m
 
 ## Task 2: Update Detector to Support HBBS 21116
 
+> **Status:** completed
+
 **Files:**
 - Modify: `pkg/detector.go:19-26,28-38,93-128`
 
@@ -277,6 +281,8 @@ git commit -m "feat(rustdesk): add HBBS21116Check method to detector"
 ---
 
 ## Task 3: Update CLI to Support rustdesk-hbbs-21116 Protocol
+
+> **Status:** completed
 
 **Files:**
 - Modify: `internal/common/common.go` (find ProtocolType enum)
@@ -376,6 +382,8 @@ git commit -m "feat(cli): add rustdesk-hbbs-21116 protocol option"
 
 ## Task 4: Write Integration Test
 
+> **Status:** completed
+
 **Files:**
 - Modify: `pkg/detector_test.go` (add test for HBBS21116)
 
@@ -462,6 +470,8 @@ git commit -m "test(rustdesk): add HBBS21116Check integration test"
 
 ## Task 5: Manual Testing
 
+> **Status:** completed
+
 **Step 1: Build the application**
 
 Run: `go build -o go-protocol-detector.exe ./cmd/go-protocol-detector`
@@ -513,6 +523,8 @@ git commit -m "docs(rustdesk): document HBBS 21116 detection research findings"
 ---
 
 ## Task 6: Final Verification
+
+> **Status:** completed
 
 **Step 1: Run all tests**
 
