@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/allanpk716/go-protocol-detector/pkg"
-	"github.com/urfave/cli/v2"
 	"log"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/allanpk716/ai-agent-cli-rules/sdks/go"
+	"github.com/allanpk716/go-protocol-detector/pkg"
+	"github.com/urfave/cli/v2"
 )
 
 var AppVersion = "unknown"
@@ -68,6 +70,11 @@ func main() {
 				Aliases: []string{"np"},
 				Value:   false,
 			},
+			&cli.BoolFlag{
+				Name:  "agent",
+				Usage: "AI Agent mode, output JSONL format",
+				Value: false,
+			},
 		},
 		Action: func(c *cli.Context) error {
 			// 检查是否没有任何参数被传递，如果没有则显示帮助信息
@@ -76,7 +83,21 @@ func main() {
 				return nil
 			}
 
-			// 直接从 context 获取参数
+			agentMode := c.Bool("agent")
+
+			// Agent mode: initialize SDK App instance
+			if agentMode {
+				sdkApp := agentsdk.New("go-protocol-detector", AppVersion)
+				log.Println("SDK App initialized:", sdkApp.Name(), "version:", sdkApp.Version())
+				sdkApp.JSONL().Success(map[string]string{
+					"mode":    "agent",
+					"version": AppVersion,
+				})
+				log.Println("Agent mode enabled")
+				return nil
+			}
+
+			// Human mode (default) — original logic, zero changes
 			protocol := c.String("protocol")
 			host := c.String("host")
 			port := c.String("port")
