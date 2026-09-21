@@ -59,6 +59,8 @@ func (sc *scanCore) startResultCollector(checkResultChan chan CheckResult, outpu
 		for revCheckResult := range checkResultChan {
 			resultMapMutex.Lock()
 
+			outputInfo.AllResults = append(outputInfo.AllResults, revCheckResult)
+
 			portInt := 0
 			if p, err := strconv.Atoi(revCheckResult.Port); err == nil {
 				portInt = p

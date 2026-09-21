@@ -22,7 +22,9 @@ type ScanContext struct {
 	Timeout   int
 
 	// Progress tracking
-	TotalTargets   int
+	TotalTargets int
+	HostsCount   int // number of unique hosts targeted
+	PortsCount   int // number of ports targeted
 	ScannedTargets int
 	SuccessCount   int
 	FailureCount   int

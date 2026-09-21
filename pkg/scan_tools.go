@@ -218,6 +218,8 @@ func (s ScanTools) ScanWithOutput(protocolType ProtocolType, inputInfo InputInfo
 
 	// Set targets in scan context
 	scanContext.SetTargets(allTargets)
+	scanContext.HostsCount = totalIPs
+	scanContext.PortsCount = len(ports)
 
 	log.Printf("Starting scan %s: %d targets, %d threads", scanContext.ScanID, scanContext.TotalTargets, s.threads)
 
@@ -339,7 +341,7 @@ func (s ScanTools) parseHost(inputHostString string) ([]IPRangeInfo, error) {
 
 	// Check for empty input
 	if inputHostString == "" {
-		return nil, fmt.Errorf("parseHost - input host string is empty")
+		return nil, errors.NewValidationError("parseHost - input host string is empty", nil)
 	}
 
 	var err error
@@ -353,7 +355,7 @@ func (s ScanTools) parseHost(inputHostString string) ([]IPRangeInfo, error) {
 			// CICR 地址类型
 			ipRangeInfo.CICR, err = cidr.ParseCIDR(oneHostString)
 			if err != nil {
-				return nil, fmt.Errorf("parseHost - ParseCIDR Error: %v", err)
+				return nil, errors.NewValidationError(fmt.Sprintf("parseHost - ParseCIDR Error: %v", err), nil)
 			}
 
 			parsedHostList = append(parsedHostList, ipRangeInfo)
@@ -363,51 +365,51 @@ func (s ScanTools) parseHost(inputHostString string) ([]IPRangeInfo, error) {
 
 			ipSplit := strings.Split(oneHostString, "-")
 			if len(ipSplit) > 2 {
-				return nil, fmt.Errorf("scan - InputInfo Host Split Error: %s", inputHostString)
+				return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Host Split Error: %s", inputHostString), nil)
 			} else if len(ipSplit) == 2 {
 				// 说明是 192.168.50.123-200 格式
 				address := net.ParseIP(ipSplit[0])
 				if address == nil {
-					return nil, fmt.Errorf("scan - InputInfo Host ParseIP Error: %v", ipSplit[0])
+					return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Host ParseIP Error: %v", ipSplit[0]), nil)
 				}
 				parts := strings.Split(ipSplit[0], ".")
 				if len(parts) != 4 {
-					return nil, fmt.Errorf("scan - InputInfo Host Split Error: %v", ipSplit[0])
+					return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Host Split Error: %v", ipSplit[0]), nil)
 				}
 				var startIndex, endIndex int
 				startIndex, err = strconv.Atoi(parts[3])
 				if err != nil {
-					return nil, fmt.Errorf("scan - InputInfo Host Atoi Error: %v", ipSplit[0])
+					return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Host Atoi Error: %v", ipSplit[0]), nil)
 				}
 
 				endIndex, err = strconv.Atoi(ipSplit[1])
 				if err != nil {
-					return nil, fmt.Errorf("scan - InputInfo Host Atoi Error: %v", ipSplit[1])
+					return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Host Atoi Error: %v", ipSplit[1]), nil)
 				}
 
 				// 添加输入验证：边界检查
 				if startIndex < 0 || startIndex > 255 {
-					return nil, fmt.Errorf("scan - InputInfo Host start index out of range [0-255]: %d", startIndex)
+					return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Host start index out of range [0-255]: %d", startIndex), nil)
 				}
 				if endIndex < 0 || endIndex > 255 {
-					return nil, fmt.Errorf("scan - InputInfo Host end index out of range [0-255]: %d", endIndex)
+					return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Host end index out of range [0-255]: %d", endIndex), nil)
 				}
 				if startIndex > endIndex {
-					return nil, fmt.Errorf("scan - InputInfo Host start index (%d) cannot be greater than end index (%d)", startIndex, endIndex)
+					return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Host start index (%d) cannot be greater than end index (%d)", startIndex, endIndex), nil)
 				}
 
 				// 防止大范围导致的资源耗尽
 				maxRangeSize := 1000
 				rangeSize := endIndex - startIndex + 1
 				if rangeSize > maxRangeSize {
-					return nil, fmt.Errorf("scan - InputInfo Host range size (%d) exceeds maximum allowed (%d)", rangeSize, maxRangeSize)
+					return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Host range size (%d) exceeds maximum allowed (%d)", rangeSize, maxRangeSize), nil)
 				}
 
 				// 显式的 IP 字节溢出检查
 				// 确保 baseIP[3] + rangeSize - 1 不会超过 255（uint8 的最大值）
 				// 虽然 endIndex <= 255 已覆盖此情况，但显式检查使代码意图更明确
 				if startIndex+rangeSize-1 > 255 {
-					return nil, fmt.Errorf("scan - InputInfo Host range would cause octet overflow: %s (start=%d, size=%d, max=255)", oneHostString, startIndex, rangeSize)
+					return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Host range would cause octet overflow: %s (start=%d, size=%d, max=255)", oneHostString, startIndex, rangeSize), nil)
 				}
 
 				ipRangeInfo.Begin = address
@@ -419,7 +421,7 @@ func (s ScanTools) parseHost(inputHostString string) ([]IPRangeInfo, error) {
 			// 单个 IP 地址
 			address := net.ParseIP(oneHostString)
 			if address == nil {
-				return nil, fmt.Errorf("scan - InputInfo Host ParseIP Error")
+				return nil, errors.NewValidationError("scan - InputInfo Host ParseIP Error", nil)
 			}
 			ipRangeInfo.Begin = address
 			ipRangeInfo.CountNextTime = 1
@@ -436,7 +438,7 @@ func (s ScanTools) parsePort(inputPortString string) ([]int, error) {
 
 	// Check for empty input
 	if inputPortString == "" {
-		return nil, fmt.Errorf("parsePort - input port string is empty")
+		return nil, errors.NewValidationError("parsePort - input port string is empty", nil)
 	}
 
 	const (
@@ -453,16 +455,16 @@ func (s ScanTools) parsePort(inputPortString string) ([]int, error) {
 	for _, port := range tmpPorts {
 		portSplit := strings.Split(port, "-")
 		if len(portSplit) > 2 {
-			return nil, fmt.Errorf("scan - InputInfo Port Split Error: %s", port)
+			return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Port Split Error: %s", port), nil)
 		} else if len(portSplit) == 2 {
 			// 说明是 20-30 这样的格式
 			startPort, err := strconv.Atoi(portSplit[0])
 			if err != nil {
-				return nil, fmt.Errorf("scan - InputInfo Port Atoi Error: %w", err)
+				return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Port Atoi Error: %v", err), nil)
 			}
 			endPort, err := strconv.Atoi(portSplit[1])
 			if err != nil {
-				return nil, fmt.Errorf("scan - InputInfo Port Atoi Error: %w", err)
+				return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Port Atoi Error: %v", err), nil)
 			}
 
 			// 验证端口边界
@@ -505,7 +507,7 @@ func (s ScanTools) parsePort(inputPortString string) ([]int, error) {
 			// 说明是单个端口格式
 			portInt, err := strconv.Atoi(port)
 			if err != nil {
-				return nil, fmt.Errorf("scan - InputInfo Port Atoi Error: %w", err)
+				return nil, errors.NewValidationError(fmt.Sprintf("scan - InputInfo Port Atoi Error: %v", err), nil)
 			}
 
 			// 验证端口边界
@@ -575,6 +577,7 @@ type OutputInfo struct {
 	ProtocolType     ProtocolType
 	SuccessMapString map[string][]string
 	FailedMapString  map[string][]string
+	AllResults       []CheckResult // full per-target results for agent mode
 }
 
 type ProtocolType int
@@ -644,6 +647,16 @@ func String2ProtocolType(input string) ProtocolType {
 	default:
 		return Common
 	}
+}
+
+// IsKnownProtocol reports whether name is a recognized protocol identifier.
+func IsKnownProtocol(name string) bool {
+	switch name {
+	case "rdp", "ssh", "ftp", "sftp", "telnet", "vnc", "common",
+		"rustdesk-hbbs", "rustdesk-hbbr", "rustdesk-hbbs-21116":
+		return true
+	}
+	return false
 }
 
 // writeResultsToCSV writes scan results to a CSV file
