@@ -22,9 +22,11 @@ func TestHBBSHelperSenderPackage(t *testing.T) {
 		t.Error("SenderPackage should not be empty")
 	}
 
-	// Verify complete package structure
+	// Verify complete package structure.
+	// hbb_common's BytesCodec frames the payload with a variable-length header:
+	// for a 4-byte payload the 1-byte header is (4 << 2) = 0x10.
 	expectedPackage := []byte{
-		0x00, 0x00, 0x00, 0x04, // 4-byte length prefix (4 bytes)
+		0x10,                   // BytesCodec length header (4 << 2)
 		0xA2, 0x02,             // field 20 tag + length
 		0x08, 0x00,             // field 1 (serial) + value
 	}
@@ -32,14 +34,13 @@ func TestHBBSHelperSenderPackage(t *testing.T) {
 		t.Errorf("Package mismatch:\ngot  %x\nwant %x", pkg, expectedPackage)
 	}
 
-	// Also verify length prefix
-	expectedPrefix := []byte{0x00, 0x00, 0x00, 0x04}
-	if len(pkg) < 4 {
+	// Also verify the BytesCodec length header decodes back to the payload length
+	if len(pkg) < 1 {
 		t.Fatalf("Package too short: %d bytes", len(pkg))
 	}
-	if pkg[0] != expectedPrefix[0] || pkg[1] != expectedPrefix[1] ||
-		pkg[2] != expectedPrefix[2] || pkg[3] != expectedPrefix[3] {
-		t.Errorf("Length prefix mismatch: got %x, want %x", pkg[0:4], expectedPrefix)
+	headerLen := pkg[0] >> 2
+	if headerLen != byte(len(pkg)-1) {
+		t.Errorf("Length header mismatch: header says %d, payload is %d", headerLen, len(pkg)-1)
 	}
 }
 

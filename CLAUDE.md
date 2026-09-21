@@ -231,7 +231,7 @@ go run cmd/go-protocol-detector/main.go --protocol=ssh --host=192.168.1.1-254 --
   - Single: `22`
   - Multiple: `22,80,443`
   - Range: `8000-8100`
-  - Mixed: `22,80,443,8000-8100,3389` (max 10000 ports total)
+  - Mixed: `22,80,443,8000-8100,3389` (max 65536 ports total)
 
 ### Safety Limits
 - IP ranges limited to prevent resource exhaustion

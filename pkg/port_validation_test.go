@@ -69,8 +69,15 @@ func TestParsePort_Validation(t *testing.T) {
 			expectedLen: 0,
 		},
 		{
+			// 端口号本身上限 65535,总量帽 65536 只能靠完整段 0-65535 触达
+			name:        "port cap boundary (65536 exactly)",
+			input:       "0-65535",
+			expectError: false,
+			expectedLen: 65536,
+		},
+		{
 			name:        "too many ports (should fail)",
-			input:       "1-10001",
+			input:       "0-65535,80",
 			expectError: true,
 			expectedLen: 0,
 		},
@@ -135,9 +142,9 @@ func TestParsePort_LargeRange(t *testing.T) {
 		t.Errorf("Expected 10000 ports, got %d", len(ports))
 	}
 
-	// 测试超过限制的端口范围
-	_, err = scan.parsePort("1-10001") // 10001 ports - should fail
+	// 测试超过限制的端口范围(总量上限 65536;单段最大只能到 0-65535,叠加一段越界)
+	_, err = scan.parsePort("0-65535,80") // 65537 ports - should fail
 	if err == nil {
-		t.Error("Expected error for port range exceeding 10000 ports")
+		t.Error("Expected error for port count exceeding 65536")
 	}
 }

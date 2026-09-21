@@ -43,7 +43,7 @@ func TestIPBoundaryValidation(t *testing.T) {
 		{"Invalid IP format", "300.400.500.600", true, "ParseIP Error"},
 		{"Incomplete IP", "192.168.1", true, "ParseIP Error"},
 		{"Text instead of IP", "not.an.ip.address", true, "ParseIP Error"},
-		{"Empty string", "", true, "ParseIP Error"},
+		{"Empty string", "", true, "input host string is empty"},
 	}
 
 	for _, tc := range testCases {
@@ -138,13 +138,15 @@ func TestThreadLimitValidation(t *testing.T) {
 }
 
 // TestInputInfoValidation 测试完整的InputInfo验证
+// host 与 port 的错误期望分开声明,避免把一个字段的错误误套到另一个字段的检查上。
 func TestInputInfoValidation(t *testing.T) {
 	scan := NewScanTools(10, 3*time.Second)
 
 	testCases := []struct {
-		name        string
-		inputInfo   InputInfo
-		shouldError bool
+		name            string
+		inputInfo       InputInfo
+		hostShouldError bool
+		portShouldError bool
 	}{
 		{
 			name: "Valid complete input",
@@ -154,7 +156,8 @@ func TestInputInfoValidation(t *testing.T) {
 				User:     "testuser",
 				Password: "testpass",
 			},
-			shouldError: false,
+			hostShouldError: false,
+			portShouldError: false,
 		},
 		{
 			name: "Empty host",
@@ -164,7 +167,8 @@ func TestInputInfoValidation(t *testing.T) {
 				User:     "testuser",
 				Password: "testpass",
 			},
-			shouldError: true,
+			hostShouldError: true,
+			portShouldError: false,
 		},
 		{
 			name: "Empty port",
@@ -174,7 +178,8 @@ func TestInputInfoValidation(t *testing.T) {
 				User:     "testuser",
 				Password: "testpass",
 			},
-			shouldError: true,
+			hostShouldError: false,
+			portShouldError: true,
 		},
 		{
 			name: "Invalid host range",
@@ -184,7 +189,8 @@ func TestInputInfoValidation(t *testing.T) {
 				User:     "testuser",
 				Password: "testpass",
 			},
-			shouldError: true,
+			hostShouldError: true,
+			portShouldError: false,
 		},
 	}
 
@@ -192,24 +198,20 @@ func TestInputInfoValidation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// 测试parseHost
 			_, err := scan.parseHost(tc.inputInfo.Host)
-			if tc.inputInfo.Host == "" {
-				if err == nil {
-					t.Error("Expected error for empty host, but got none")
-				}
-			} else if tc.shouldError && err == nil {
-				t.Errorf("Expected error for input '%+v', but got none", tc.inputInfo)
+			if tc.hostShouldError && err == nil {
+				t.Errorf("Expected host error for input '%+v', but got none", tc.inputInfo)
+			}
+			if !tc.hostShouldError && err != nil {
+				t.Errorf("Unexpected host error for input '%+v': %v", tc.inputInfo, err)
 			}
 
 			// 测试parsePort
 			_, err = scan.parsePort(tc.inputInfo.Port)
-			if tc.inputInfo.Port == "" {
-				if err == nil {
-					t.Error("Expected error for empty port, but got none")
-				}
-			} else if tc.inputInfo.Host != "" && tc.shouldError && err == nil {
-				// Only check shouldError for port if host is valid (not empty)
-				// This prevents false failures when host is empty but port is valid
-				t.Errorf("Expected error for input '%+v', but got none", tc.inputInfo)
+			if tc.portShouldError && err == nil {
+				t.Errorf("Expected port error for input '%+v', but got none", tc.inputInfo)
+			}
+			if !tc.portShouldError && err != nil {
+				t.Errorf("Unexpected port error for input '%+v': %v", tc.inputInfo, err)
 			}
 		})
 	}
