@@ -2,41 +2,35 @@
 
 [[中文]](https://github.com/allanpk716/go-protocol-detector/blob/master/ReadMeThings/readme_cn.md)
 
-Network protocol detector. 
+Network protocol detector — one binary, two audiences:
 
-**Not Stable Version !** 
+* **AI agents** get a machine contract: JSONL output, semantic exit codes,
+  and a built-in capability dump. Start at
+  [AGENT_INSTRUCTION.md](./AGENT_INSTRUCTION.md) — it is self-contained.
+* **Humans** get a terminal tool with progress bars, a readable result
+  block, and CSV export. That is the rest of this page.
+
+The same command serves both: when stdout is a terminal you get human
+output; when it is piped, redirected, or called by an agent you get exactly
+one JSONL line. Force either mode with `--format=human` or `--format=jsonl`.
+
+**Not Stable Version !**
 
 May be refactored in future use.
 
-## Support Protocol
+## Install
 
-* RDP
+```bash
+# Download a release binary (Linux amd64/arm/arm64, Windows amd64, + checksums)
+# https://github.com/allanpk716/go-protocol-detector/releases
 
-* FTP
+# Or install with Go >= 1.24
+go install github.com/allanpk716/go-protocol-detector/cmd/go-protocol-detector@latest
 
-* SFTP
-
-  > SFTP (SSH File Transfer Protocol) detection using protocol analysis.
-  >
-  > Detects SSH service and SFTP subsystem availability without authentication.
-  >
-  > Fast 3-layer detection: TCP connection → SSH protocol identification → SFTP subsystem query.
-
-* SSH
-
-* VNC
-
-* Telnet
-
-* RustDesk
-
-  > RustDesk remote desktop software detection.
-  >
-  > - **rustdesk-hbbs**: HBBS (Rendezvous/Signaling Server) detection on port 21116
-  > - **rustdesk-hbbr**: HBBR (Relay Server) detection on port 21117
-  > - **rustdesk-hbbs-21116**: HBBS TCP hole punching service detection on port 21116 (protobuf `RegisterPk` handshake)
-  >
-  > Uses protobuf-based detection for reliable RustDesk server identification.
+# Or build from source
+git clone https://github.com/allanpk716/go-protocol-detector
+cd go-protocol-detector && go build -o go-protocol-detector ./cmd/go-protocol-detector
+```
 
 ## How to use
 
@@ -57,7 +51,7 @@ USAGE:
    go-protocol-detector [global options] command [command options] [arguments...]
 
 VERSION:
-   v0.10.0
+   v0.16.0
 
 DESCRIPTION:
    Multi-protocol scan tool
@@ -66,18 +60,22 @@ COMMANDS:
    help, h  Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
-   --help, -h        show help (default: false)
-   --host value      support 3 diffs types: 192.168.1.1,192.168.1.100-254,192.168.1.0/24 (default: "192.168.1.1")
-   --password value  if you scan sftp, need give a Password: root (default: "root")
-   --port value      support like: 22,80,443,3380-3390 (default: "22")
-   --prikey value    if you scan sftp, need give a pri key Full Path( user name or this priKeyFPath only chose one): ~/.ssh/id_rsa (default: "~/.ssh/id_rsa")
-   --protocol value  select only one protocol: common | ftp | rdp | rustdesk-hbbs | rustdesk-hbbr | rustdesk-hbbs-21116 | sftp | ssh | telnet | vnc (default: "common")
-   --thread value    10 (default: 10)
-   --timeout value   1000 ms (default: 1000)
-   --user value      if you scan sftp, need give a UserName: root (default: "root")
-   --csv-output value  output scan results to CSV file (specify file path to enable CSV output)
+   --agent              prefer JSONL output (applies only when --format is auto/unrecognized) (default: false)
+   --csv-output value   output scan results to CSV file (specify file path to enable CSV output)
+   --format value       output format: auto | human | jsonl (explicit value always wins; unrecognized values fall back to auto) (default: "auto")
+   --help, -h           show help (default: false)
+   --host value         support 3 diffs types: 192.168.1.1,192.168.1.100-254,192.168.1.0/24
    --no-progress, --np  disable progress bar output (default: false)
-   --version, -v     print the version (default: false)
+   --output-file value  write full scan results (all negatives included, no truncation) as JSON to this file
+   --password value     if you scan sftp, need give a Password: root (default: "root")
+   --port value         support like: 22,80,443,3380-3390
+   --prikey value       if you scan sftp, need give a pri key Full Path( user name or this priKeyFPath only chose one): ~/.ssh/id_rsa (default: "~/.ssh/id_rsa")
+   --protocol value     select only one protocol: common | ftp | rdp | rustdesk-hbbs | rustdesk-hbbr | rustdesk-hbbs-21116 | sftp | ssh | telnet | vnc (default: "common")
+   --self-describe      print machine-readable capability description (JSONL when not human) and exit (default: false)
+   --thread value       10 (default: 10)
+   --timeout value      1000 ms (default: 1000)
+   --user value         if you scan sftp, need give a UserName: root (default: "root")
+   --version, -v        print the version (default: false)
 ```
 
 Example:
@@ -87,11 +85,8 @@ go-protocol-detector --protocol=rdp --host=172.20.65.89-101 --port=3389
 
 go-protocol-detector --protocol=rdp --host=172.20.65.89-101 --port=3389,1024-2000
 
-# Fast SFTP detection (recommended, no authentication required)
+# SFTP: credential-free protocol detection (see SFTP_DETECTION_GUIDE.md)
 go-protocol-detector --protocol=sftp --host=172.20.65.1/24 --port=22
-
-# SFTP detection with authentication (when required)
-go-protocol-detector --protocol=sftp --host=172.20.65.1/24 --port=22 --user=root --password=123
 
 # RustDesk HBBS detection (port 21116)
 go-protocol-detector --protocol=rustdesk-hbbs --host=192.168.1.1-254 --port=21116
@@ -109,16 +104,48 @@ go-protocol-detector --protocol=ssh --host=192.168.1.0/24 --port=22 --csv-output
 go-protocol-detector --protocol=rdp --host=192.168.1.1-254 --port=3389 --no-progress
 ```
 
+## Support Protocol
+
+* RDP
+
+* FTP
+
+* SFTP
+
+  > SFTP (SSH File Transfer Protocol) detection using protocol analysis.
+  >
+  > Detects SSH service and SFTP subsystem availability without authentication.
+  >
+  > Fast 3-layer detection: TCP connection → SSH protocol identification → SFTP subsystem query.
+  >
+  > Details: [SFTP_DETECTION_GUIDE.md](./SFTP_DETECTION_GUIDE.md)
+
+* SSH
+
+* VNC
+
+* Telnet
+
+* RustDesk
+
+  > RustDesk remote desktop software detection.
+  >
+  > - **rustdesk-hbbs**: HBBS (Rendezvous/Signaling Server) detection on port 21116 (protobuf `RegisterPk` handshake)
+  > - **rustdesk-hbbr**: HBBR (Relay Server) detection on port 21117
+  > - **rustdesk-hbbs-21116**: HBBS TCP hole punching service detection on port 21116 (protobuf `RegisterPk` handshake)
+  >
+  > Uses protobuf-based detection for reliable RustDesk server identification.
+
 ## Using with AI agents
 
 When stdout is not a terminal (piped, redirected, or called by an agent), the
 tool emits a single-line JSONL result envelope instead of human output.
-Force it explicitly with `--format=jsonl`. `--agent` prefers JSONL when
-`--format` is auto. Semantic exit codes (0/2/4/1) and a machine-readable
-capability dump (`--self-describe`) are included. Full non-truncated results
-can be written with `--output-file`.
+Force it explicitly with `--format=jsonl`. Semantic exit codes (0/2/4/1), a
+machine-readable capability dump (`--self-describe`), and full non-truncated
+results via `--output-file` are included.
 
-See [AGENT_INSTRUCTION.md](./AGENT_INSTRUCTION.md) for the complete contract.
+The complete contract — install, output schema, exit codes, error envelopes,
+worked workflow — lives in [AGENT_INSTRUCTION.md](./AGENT_INSTRUCTION.md).
 
 ## TODO
 
