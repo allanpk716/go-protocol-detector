@@ -68,11 +68,11 @@ go run cmd/go-protocol-detector/main.go --protocol=rdp --host=192.168.1.1-254 --
 # With custom threads and timeout
 go run cmd/go-protocol-detector/main.go --protocol=ssh --host=192.168.1.0/24 --port=22 --thread=20 --timeout=5000
 
-# SFTP with authentication
-go run cmd/go-protocol-detector/main.go --protocol=sftp --host=192.168.1.100-150 --port=22 --user=root --password=mypassword
+# SFTP is credential-free protocol detection; --user/--password/--prikey do NOT affect sftp scans (see SFTP_DETECTION_GUIDE.md)
+go run cmd/go-protocol-detector/main.go --protocol=sftp --host=192.168.1.100-150 --port=22
 
 # RustDesk detection examples
-go run cmd/go-protocol-detector/main.go --protocol=rustdesk-hbbs --host=192.168.1.1-254 --port=21115
+go run cmd/go-protocol-detector/main.go --protocol=rustdesk-hbbs --host=192.168.1.1-254 --port=21116
 go run cmd/go-protocol-detector/main.go --protocol=rustdesk-hbbr --host=192.168.1.1-254 --port=21117
 go run cmd/go-protocol-detector/main.go --protocol=rustdesk-hbbs-21116 --host=192.168.1.1-254 --port=21116
 
@@ -141,7 +141,7 @@ go run cmd/go-protocol-detector/main.go --protocol=ssh --host=192.168.1.1-254 --
    - Each protocol has its own helper with packet definitions and response features
    - RDP, SSH, FTP use packet matching with specific byte pattern detection
    - RustDesk (HBBS, HBBR, HBBS21116) uses protobuf-encoded messages for protocol-specific detection
-   - SFTP uses 3-layer protocol detection (TCP → SSH Banner → SFTP subsystem query) as the primary method, with auth-based detection as fallback when credentials are provided
+   - SFTP uses 3-layer protocol detection (TCP → SSH Banner → SFTP subsystem query); the CLI pipeline is always credential-free (auth-based detection exists as a library API only)
 
 5. **Supporting Infrastructure**
    - `internal/common/feature.go`: Defines `ReceiverFeature` for packet matching
@@ -177,7 +177,7 @@ go run cmd/go-protocol-detector/main.go --protocol=ssh --host=192.168.1.1-254 --
    - Layer 2: SSH Banner reading to verify SSH protocol (e.g. `SSH-2.0-OpenSSH_8.9`)
    - Layer 3: SSH subsystem query to confirm SFTP subsystem support
    - Returns detailed diagnostics (`SFTPDiagnostics`) including TCP status, SSH banner/version, and SFTP support
-   - Auth-based detection (`CheckWithAuth`) remains available as fallback when credentials are provided
+   - Auth-based detection (`CheckWithAuth`) is a library API only; the CLI ignores credentials for sftp. On auth-required SSH servers (most of them) layer 3 cannot complete and the result is `protocol_mismatch`
 
 4. **RustDesk HBBR Detection** (send-only)
    - Sends protobuf `RequestRelay` message to target port
@@ -241,7 +241,7 @@ go run cmd/go-protocol-detector/main.go --protocol=ssh --host=192.168.1.1-254 --
 
 ## Protocol Specific Notes
 
-- **SFTP**: Uses 3-layer protocol detection (TCP → SSH Banner → SFTP subsystem query) as the primary method, requiring no authentication credentials. Auth-based detection is available as fallback when username/password or private key are provided. Private key files are validated for existence and format.
+- **SFTP**: Uses 3-layer protocol detection (TCP → SSH Banner → SFTP subsystem query), requiring no authentication credentials — the CLI scan pipeline never uses credentials for sftp. Auth-based confirmation (`CheckWithAuth`) is a library API (`internal/feature/sftp`); private key files are validated for existence and format there.
 - **RDP**: Detects RDP service across Windows versions (2003, 2008, 2012, 2016, 2019, Win7, Win10) using connection request packet matching.
 - **SSH**: Packet-based detection using SSH-2.0 protocol identification string, no authentication required.
 - **FTP**: Basic FTP service detection using connection packet matching with standard FTP response patterns.
@@ -249,7 +249,7 @@ go run cmd/go-protocol-detector/main.go --protocol=ssh --host=192.168.1.1-254 --
 - **VNC**: VNC protocol detection via RFB (Remote Frame Buffer) protocol connection handshake.
 - **Common**: Generic TCP port open/closed detection using simple socket connection.
 - **RustDesk**: Three detection modes for RustDesk remote desktop infrastructure:
-  - **rustdesk-hbbs**: Sends protobuf `TestNatRequest` message; verifies `TestNatResponse` with port field. Detects HBBS rendezvous/signaling server.
+  - **rustdesk-hbbs**: Sends protobuf `RegisterPk` message (same probe as rustdesk-hbbs-21116); verifies `RegisterPkResponse`. Detects HBBS rendezvous/signaling server on port 21116. Port 21115 (NAT test) is NOT detected.
   - **rustdesk-hbbr**: Sends protobuf `RequestRelay` message; detection by successful send without connection reset. Detects HBBR relay server.
   - **rustdesk-hbbs-21116**: Sends protobuf `RegisterPk` message with `no_register_device=true`; verifies `RegisterPkResponse` field. Detects HBBS TCP hole punching service on port 21116.
 
