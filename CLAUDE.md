@@ -80,6 +80,17 @@ go run cmd/go-protocol-detector/main.go --protocol=rustdesk-hbbs-21116 --host=19
 go run cmd/go-protocol-detector/main.go --protocol=common --host=192.168.1.1,192.168.1.100-150,10.0.0.0/24 --port=22,80,443,3389,8000-8100
 ```
 
+### Agent / machine output
+
+```bash
+# JSONL output is automatic when stdout is not a terminal; force it with:
+go run cmd/go-protocol-detector/main.go --format=jsonl --protocol=ssh --host=192.168.1.1-254 --port=22
+# Machine-readable capability description:
+go run cmd/go-protocol-detector/main.go --self-describe --format=jsonl
+# Full results to file (envelope carries only the path):
+go run cmd/go-protocol-detector/main.go --format=jsonl --output-file=full.json --protocol=common --host=10.0.0.1-254 --port=22,80
+```
+
 ### Running with Progress Bars
 
 The scanner displays dual progress bars by default when outputting to a terminal:

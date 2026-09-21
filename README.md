@@ -109,6 +109,17 @@ go-protocol-detector --protocol=ssh --host=192.168.1.0/24 --port=22 --csv-output
 go-protocol-detector --protocol=rdp --host=192.168.1.1-254 --port=3389 --no-progress
 ```
 
+## Using with AI agents
+
+When stdout is not a terminal (piped, redirected, or called by an agent), the
+tool emits a single-line JSONL result envelope instead of human output.
+Force it explicitly with `--format=jsonl`. `--agent` prefers JSONL when
+`--format` is auto. Semantic exit codes (0/2/4/1) and a machine-readable
+capability dump (`--self-describe`) are included. Full non-truncated results
+can be written with `--output-file`.
+
+See [AGENT_INSTRUCTION.md](./AGENT_INSTRUCTION.md) for the complete contract.
+
 ## TODO
 
 - [ ] Optimize SFTP detection performance and credential testing strategy
