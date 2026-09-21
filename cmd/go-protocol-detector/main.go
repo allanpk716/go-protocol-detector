@@ -31,7 +31,11 @@ func main() {
 		// envelope with stderr silent and exit 2 — not a stderr text dump.
 		OnUsageError: func(c *cli.Context, err error, isSubcommand bool) error {
 			if stdoutIsTerminal() {
-				return err // terminal: default usage-error behavior
+				// Terminal: replicate urfave/cli's default usage-error output
+				// ("Incorrect Usage." + app help), which our hook short-circuits.
+				_, _ = fmt.Fprintf(c.App.Writer, "%s %s\n\n", "Incorrect Usage.", err.Error())
+				_ = cli.ShowAppHelp(c)
+				return err
 			}
 			w := newAgentWriter()
 			_ = w.ErrorWithCode("INPUT_INVALID", err.Error())
