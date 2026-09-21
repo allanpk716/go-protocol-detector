@@ -32,10 +32,10 @@ func ClassifyNetError(err error) string {
 	}
 	var errno syscall.Errno
 	if errors.As(err, &errno) {
-		switch errno {
-		case syscall.ECONNREFUSED:
+		switch {
+		case errno == syscall.ECONNREFUSED || windowsRefusedErrno(errno):
 			return ReasonClosed
-		case syscall.EHOSTUNREACH, syscall.ENETUNREACH:
+		case errno == syscall.EHOSTUNREACH || errno == syscall.ENETUNREACH || windowsUnreachableErrno(errno):
 			return ReasonUnreachable
 		}
 	}

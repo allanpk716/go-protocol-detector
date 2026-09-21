@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"runtime"
 	"syscall"
 	"testing"
 )
@@ -27,6 +28,30 @@ func TestClassifyNetError(t *testing.T) {
 		{"eof", io.EOF, ReasonProtocolMismatch},
 		{"unexpected eof", io.ErrUnexpectedEOF, ReasonProtocolMismatch},
 		{"plain error", errors.New("boom"), ReasonUnknown},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := ClassifyNetError(c.err); got != c.want {
+				t.Fatalf("ClassifyNetError(%v) = %q, want %q", c.err, got, c.want)
+			}
+		})
+	}
+}
+
+// TestClassifyNetErrorWSACodes pins the real Windows runtime errno values
+// (fabricated with the literal WSA numbers a refused dial actually produces).
+func TestClassifyNetErrorWSACodes(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("WSA codes are Windows-only")
+	}
+	cases := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"wsaeconnrefused", dialErr(syscall.Errno(10061)), ReasonClosed},
+		{"wsaehostunreach", dialErr(syscall.Errno(10065)), ReasonUnreachable},
+		{"wsaenetunreach", dialErr(syscall.Errno(10051)), ReasonUnreachable},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
