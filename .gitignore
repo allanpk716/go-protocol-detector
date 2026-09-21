@@ -39,3 +39,5 @@ vendor/
 coverage/
 .cache/
 tmp/
+
+.xcheck/
