@@ -104,7 +104,7 @@ func (s SFTPHelper) checkSFTPProtocolWithDiagnostics() (*SFTPDiagnostics, error)
 	if err != nil {
 		diagnostics.ErrorMsg = fmt.Sprintf("TCP连接失败: %v", err)
 		diagnostics.ElapsedTime = time.Since(startTime).Milliseconds()
-		return diagnostics, custom_error.ErrSFTPNotFound
+		return diagnostics, fmt.Errorf("%w: %w", custom_error.ErrSFTPNotFound, err)
 	}
 	defer netConn.Close()
 	diagnostics.TCPConnected = true
@@ -116,7 +116,7 @@ func (s SFTPHelper) checkSFTPProtocolWithDiagnostics() (*SFTPDiagnostics, error)
 	if err != nil {
 		diagnostics.ErrorMsg = fmt.Sprintf("读取SSH Banner失败: %v", err)
 		diagnostics.ElapsedTime = time.Since(startTime).Milliseconds()
-		return diagnostics, custom_error.ErrSFTPNotFound
+		return diagnostics, fmt.Errorf("%w: %w", custom_error.ErrSFTPNotFound, err)
 	}
 
 	diagnostics.SSHBanner = strings.TrimSpace(banner)

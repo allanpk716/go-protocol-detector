@@ -38,37 +38,15 @@ func newScanCore(st *ScanTools, pt ProtocolType, ii InputInfo, showProgress, ena
 }
 
 // performProtocolCheck 执行特定协议的检测
-func (sc *scanCore) performProtocolCheck(deliveryInfo DeliveryInfo) (bool, string) {
-	var err error
-
-	switch sc.protocol {
-	case RDP:
-		err = deliveryInfo.Detector.RDPCheck(deliveryInfo.Host, deliveryInfo.Port)
-	case SSH:
-		err = deliveryInfo.Detector.SSHCheck(deliveryInfo.Host, deliveryInfo.Port)
-	case FTP:
-		err = deliveryInfo.Detector.FTPCheck(deliveryInfo.Host, deliveryInfo.Port)
-	case SFTP:
-		err = deliveryInfo.Detector.SFTPCheck(deliveryInfo.Host, deliveryInfo.Port,
-			deliveryInfo.User, deliveryInfo.Password, deliveryInfo.PrivateKeyFullPath)
-	case Telnet:
-		err = deliveryInfo.Detector.TelnetCheck(deliveryInfo.Host, deliveryInfo.Port)
-	case VNC:
-		err = deliveryInfo.Detector.VNCCheck(deliveryInfo.Host, deliveryInfo.Port)
-	case RustDeskHBBS:
-		err = deliveryInfo.Detector.HBBSCheck(deliveryInfo.Host, deliveryInfo.Port)
-	case RustDeskHBBR:
-		err = deliveryInfo.Detector.HBBRCheck(deliveryInfo.Host, deliveryInfo.Port)
-	case RustDeskHBBS21116:
-		err = deliveryInfo.Detector.HBBS21116Check(deliveryInfo.Host, deliveryInfo.Port)
-	default:
-		err = deliveryInfo.Detector.CommonPortCheck(deliveryInfo.Host, deliveryInfo.Port)
-	}
+func (sc *scanCore) performProtocolCheck(deliveryInfo DeliveryInfo) (bool, string, CheckDetail) {
+	detail, err := deliveryInfo.Detector.CheckDetailed(
+		sc.protocol, deliveryInfo.Host, deliveryInfo.Port,
+		deliveryInfo.User, deliveryInfo.Password, deliveryInfo.PrivateKeyFullPath)
 
 	if err != nil {
-		return false, err.Error()
+		return false, err.Error(), detail
 	}
-	return true, ""
+	return true, "", detail
 }
 
 // startResultCollector 启动结果收集 goroutine
@@ -170,7 +148,10 @@ func (sc *scanCore) createGoroutinePoolWithCallback(checkResultChan chan CheckRe
 		}
 		acquiredConn = true
 
-		checkResult.Success, checkResult.ErrorMessage = sc.performProtocolCheck(deliveryInfo)
+		var detail CheckDetail
+		checkResult.Success, checkResult.ErrorMessage, detail = sc.performProtocolCheck(deliveryInfo)
+		checkResult.Banner = detail.Banner
+		checkResult.Reason = detail.Reason
 	})
 
 	return p, err

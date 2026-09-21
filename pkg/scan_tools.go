@@ -559,6 +559,8 @@ type CheckResult struct {
 	Timestamp    time.Time
 	ResponseTime time.Duration
 	ErrorMessage string
+	Banner       string // sanitized raw-response prefix on success ("" when none)
+	Reason       string // negative reason on failure ("" on success or scan-level error)
 }
 
 type InputInfo struct {

@@ -12,6 +12,7 @@ import (
 	"github.com/allanpk716/go-protocol-detector/internal/feature/telnet"
 	"github.com/allanpk716/go-protocol-detector/internal/feature/vnc"
 	"github.com/allanpk716/go-protocol-detector/internal/feature/rustdesk"
+	"github.com/allanpk716/go-protocol-detector/internal/utils"
 	"net"
 	"time"
 )
@@ -44,6 +45,47 @@ func NewDetector(timeOut time.Duration) *Detector {
 		timeOut:           timeOut,
 	}
 	return &d
+}
+
+// CheckDetail carries per-target extra info for agent mode.
+// Banner: sanitized raw-response prefix of a hit (may be empty).
+// Reason: negative reason of a failure ("closed|timeout|protocol_mismatch|unreachable|unknown").
+type CheckDetail struct {
+	Banner string
+	Reason string
+}
+
+// CheckDetailed runs the protocol check for pt and returns extra detail.
+// It is the agent-mode entry point; the plain XxxCheck methods stay for tests
+// and backward compatibility.
+//
+// Banner capture scope is fixed by decision D7: only ssh/ftp/vnc/sftp return
+// a banner; rdp/rustdesk/common never do (captureBanner=false).
+func (d Detector) CheckDetailed(pt ProtocolType, host, port, user, password, privateKeyFullPath string) (CheckDetail, error) {
+	switch pt {
+	case RDP:
+		return d.commonCheckDetailed(host, port, d.rdp.SenderPackage, d.rdp.ReceiverFeatures, custom_error.ErrRDPNotFound, false)
+	case SSH:
+		return d.commonCheckDetailed(host, port, d.ssh.SenderPackage, d.ssh.ReceiverFeatures, custom_error.ErrSSHNotFound, true)
+	case FTP:
+		return d.commonCheckDetailed(host, port, d.ftp.SenderPackage, d.ftp.ReceiverFeatures, custom_error.ErrFTPNotFound, true)
+	case SFTP:
+		return d.sftpCheckDetailed(host, port)
+	case Telnet:
+		return d.telnetCheckDetailed(host, port)
+	case VNC:
+		return d.vncCheckDetailed(host, port)
+	case RustDeskHBBS:
+		// HBBS uses the RegisterPk probe, same as the old HBBSCheck (see its
+		// comment); the sentinel must match too so scan results stay identical.
+		return d.commonCheckDetailed(host, port, d.rustdeskHBBS21116.SenderPackage, d.rustdeskHBBS21116.ReceiverFeatures, custom_error.ErrRustDeskHBBS21116NotFound, false)
+	case RustDeskHBBR:
+		return d.hbbrCheckDetailed(host, port)
+	case RustDeskHBBS21116:
+		return d.commonCheckDetailed(host, port, d.rustdeskHBBS21116.SenderPackage, d.rustdeskHBBS21116.ReceiverFeatures, custom_error.ErrRustDeskHBBS21116NotFound, false)
+	default:
+		return d.commonPortCheckDetailed(host, port)
+	}
 }
 
 func (d Detector) RDPCheck(host, port string) error {
@@ -158,45 +200,126 @@ func (d Detector) HBBS21116Check(host, port string) error {
 
 func (d Detector) commonCheck(host string, port string,
 	senderPackage []byte, recFeatures []common.ReceiverFeature, outErr error) error {
+	_, err := d.commonCheckDetailed(host, port, senderPackage, recFeatures, outErr, false)
+	return err
+}
+
+func (d Detector) commonCheckDetailed(host string, port string,
+	senderPackage []byte, recFeatures []common.ReceiverFeature, outErr error, captureBanner bool) (CheckDetail, error) {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), d.timeOut)
 	if err != nil {
-		return outErr
+		return CheckDetail{Reason: utils.ClassifyNetError(err)}, outErr
 	}
 	defer conn.Close()
 
-	_, err = conn.Write(senderPackage)
-	if err != nil {
-		return outErr
+	if _, err = conn.Write(senderPackage); err != nil {
+		return CheckDetail{Reason: utils.ReasonClosed}, outErr
 	}
 	lastFeature := recFeatures[len(recFeatures)-1]
 	readBytesLen := lastFeature.StartIndex + len(lastFeature.FeatureBytes)
 
 	// 添加网络读取安全限制
 	if readBytesLen > MaxReadSize {
-		return outErr
+		return CheckDetail{Reason: utils.ReasonUnknown}, outErr
 	}
 	if readBytesLen <= 0 {
-		return outErr
+		return CheckDetail{Reason: utils.ReasonUnknown}, outErr
 	}
 
 	var readBuf = make([]byte, readBytesLen)
 
 	// 设置读取超时，防止阻塞
-	err = conn.SetReadDeadline(time.Now().Add(ReadTimeout))
-	if err != nil {
-		return outErr
+	if err = conn.SetReadDeadline(time.Now().Add(ReadTimeout)); err != nil {
+		return CheckDetail{Reason: utils.ReasonUnknown}, outErr
 	}
 
 	// 使用io.ReadFull确保读取指定大小的数据或返回错误
-	_, err = io.ReadFull(conn, readBuf)
-	if err != nil {
-		return outErr
+	if _, err = io.ReadFull(conn, readBuf); err != nil {
+		return CheckDetail{Reason: utils.ClassifyNetError(err)}, outErr
 	}
 	// according to the features
 	for _, feature := range recFeatures {
 		if bytes.Equal(readBuf[feature.StartIndex:feature.StartIndex+len(feature.FeatureBytes)], feature.FeatureBytes) == false {
-			return outErr
+			return CheckDetail{Reason: utils.ReasonProtocolMismatch}, outErr
 		}
 	}
-	return nil
+	if captureBanner {
+		return CheckDetail{Banner: utils.SanitizeBanner(d.readBannerTail(conn, readBuf))}, nil
+	}
+	return CheckDetail{}, nil
+}
+
+// readBannerTail best-effort drains what the peer already sent beyond the
+// match window (SSH/FTP greeting lines are longer than the matched bytes).
+// The match-sized io.ReadFull above usually stops short of the full line, e.g.
+// SSH only reads 8 bytes ("SSH-2.0-"). The tail read is bounded (500ms) and
+// NEVER affects the check outcome — it runs only after a successful match.
+func (d Detector) readBannerTail(conn net.Conn, head []byte) []byte {
+	_ = conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	tail := make([]byte, 512)
+	n, _ := conn.Read(tail)
+	if n <= 0 {
+		return head
+	}
+	return append(head, tail[:n]...)
+}
+
+func (d Detector) telnetCheckDetailed(host, port string) (CheckDetail, error) {
+	tel, err := telnet.NewTelnetHelper("tcp", net.JoinHostPort(host, port), d.timeOut)
+	if err != nil {
+		return CheckDetail{Reason: utils.ClassifyNetError(err)}, custom_error.ErrTelnetNotFound
+	}
+	n, err := tel.Check()
+	if err != nil {
+		return CheckDetail{Reason: utils.ClassifyNetError(err)}, custom_error.ErrTelnetNotFound
+	}
+	if n <= 0 {
+		return CheckDetail{Reason: utils.ReasonProtocolMismatch}, custom_error.ErrTelnetNotFound
+	}
+	return CheckDetail{}, nil
+}
+
+func (d Detector) vncCheckDetailed(host, port string) (CheckDetail, error) {
+	v, err := vnc.NewVNCHelper("tcp", net.JoinHostPort(host, port), d.timeOut)
+	if err != nil {
+		return CheckDetail{Reason: utils.ClassifyNetError(err)}, custom_error.ErrVNCNotFound
+	}
+	banner, reason, err := v.CheckDetailed()
+	if err != nil {
+		return CheckDetail{Reason: reason}, custom_error.ErrVNCNotFound
+	}
+	return CheckDetail{Banner: banner}, nil
+}
+
+func (d Detector) sftpCheckDetailed(host, port string) (CheckDetail, error) {
+	diag, err := sftp.NewSFTPHelper(host, port, d.timeOut).CheckWithDiagnostics()
+	if err == nil {
+		return CheckDetail{Banner: utils.SanitizeBanner([]byte(diag.SSHBanner))}, nil
+	}
+	// TCP ok and a banner came back, but not a usable SSH/SFTP service
+	if diag != nil && diag.TCPConnected && diag.SSHBanner != "" {
+		return CheckDetail{Reason: utils.ReasonProtocolMismatch}, err
+	}
+	return CheckDetail{Reason: utils.ClassifyNetError(err)}, err
+}
+
+func (d Detector) hbbrCheckDetailed(host, port string) (CheckDetail, error) {
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), d.timeOut)
+	if err != nil {
+		return CheckDetail{Reason: utils.ClassifyNetError(err)}, custom_error.ErrRustDeskHBBRNotFound
+	}
+	defer conn.Close()
+	if _, err = conn.Write(d.rustdeskHBBR.SenderPackage); err != nil {
+		return CheckDetail{Reason: utils.ReasonClosed}, custom_error.ErrRustDeskHBBRNotFound
+	}
+	return CheckDetail{}, nil
+}
+
+func (d Detector) commonPortCheckDetailed(host, port string) (CheckDetail, error) {
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), d.timeOut)
+	if err != nil {
+		return CheckDetail{Reason: utils.ClassifyNetError(err)}, custom_error.ErrCommontPortCheckError
+	}
+	_ = conn.Close()
+	return CheckDetail{}, nil
 }
